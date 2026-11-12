@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest-cs-uk.json" id="manifest-link">
 <link rel="apple-touch-icon" href="icon-cs-180.png">
 <link rel="icon" type="image/png" href="icon-cs-192.png">
+<script src="config.js"></script>
 <style>
 /* Vocabulary app v2. One template, two builds: "claude" (synced database + Claude photo import) and "web" (offline, this device).
    Layout: splash → onboarding (first run) or chooser → dictionary: header, sticky topic chips, topic cards with
@@ -75,11 +76,9 @@ input, select, textarea { font-size: 16px; }
 
 /* splash */
 .splash { position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; justify-items: center; gap: 14px; background: var(--bg); transition: opacity .4s ease, visibility .4s ease; }
-.splash img { border-radius: 24px; box-shadow: 0 14px 40px rgba(0,0,0,.18); animation: logo-in .75s var(--spring) both; transition: transform .4s var(--ease); }
 .splash .sp-name { font-family: var(--display); font-size: 28px; font-weight: 700; animation: rise .55s .18s var(--ease) both; }
 .splash .sp-status { font-size: 13px; color: var(--muted); min-height: 18px; animation: fade-in .4s .6s both; }
 .splash.out { opacity: 0; visibility: hidden; }
-.splash.out img { transform: scale(1.12); }
 
 /* onboarding + chooser */
 .chooser, .onboard { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
@@ -247,6 +246,17 @@ body.hide-t .w:not(.shown) .c1, body.hide-t .w:not(.shown) .c3 { filter: blur(7p
 .floatbar button.solid { background: var(--surface); color: var(--ink); border-color: var(--surface); }
 #toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; }
 #toast.leaving { animation: fade-out .2s ease forwards; }
+/* update banner */
+.updbar { position: fixed; z-index: 70; top: calc(10px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 24px); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 16px; background: color-mix(in srgb, var(--surface) 95%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); border: 1px solid var(--line); box-shadow: 0 12px 34px rgba(0,0,0,.16); font-size: 13.5px; color: var(--ink); }
+.updbar:not([hidden]) { animation: upd-in .5s var(--spring); }
+.updbar #upd-text span { color: var(--muted); }
+.upd-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); animation: upd-pulse 2s ease-in-out infinite; }
+.upd-x { border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; border-radius: 10px; cursor: pointer; font-size: 13px; flex: none; }
+.upd-x:hover { background: var(--line); }
+@keyframes upd-in { from { opacity: 0; transform: translate(-50%, -24px) scale(.96); } }
+@keyframes upd-pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .updbar:not([hidden]), .upd-dot { animation: none; } }
+@media (max-width: 520px) { .updbar { flex-wrap: wrap; justify-content: flex-end; } .updbar #upd-text { flex: 1 1 calc(100% - 30px); } }
 
 /* dialogs */
 dialog { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: var(--ink); padding: 0; width: min(580px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
@@ -485,44 +495,139 @@ dialog.wide { width: min(760px, calc(100vw - 24px)); }
   dialog[open] { animation: sheet-in .38s var(--ease); }
   dialog.closing { animation: sheet-out .22s ease forwards; }
 }
+/* ===== v0.7: book logo, a touch of neon, help, AI helper, Google Drive ===== */
+:root { --neon: #4f7cff; --neon2: #a46bff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --neon: #7ea6ff; --neon2: #c49bff; } }
+:root[data-theme="dark"] { --neon: #7ea6ff; --neon2: #c49bff; }
+
+/* the book: closed at rest, opens a little on hover or tap, opens fully when a dictionary opens */
+.book { --s: 76px; --tx: 0; --ty: 0; position: relative; width: var(--s); height: var(--s); perspective: calc(var(--s) * 6); flex: none; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+.book::before { content: ""; position: absolute; left: -38%; right: -38%; top: 0; bottom: -42%; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--neon) 55%, transparent), color-mix(in srgb, var(--neon2) 22%, transparent) 55%, transparent);
+  filter: blur(calc(var(--s) * .2)); opacity: .2; transition: opacity .5s ease, transform .7s var(--spring); animation: glow-breathe 5s ease-in-out infinite; }
+@keyframes glow-breathe { 50% { opacity: .3; } }
+.bk { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(calc(var(--ty) * -8deg)) rotateY(calc(var(--tx) * 10deg)); transition: transform .8s var(--spring); }
+.bk-pages, .bk-leaf { position: absolute; top: 4.5%; bottom: 4.5%; left: 2%; right: -5%; box-sizing: border-box; padding: 18% 14% 16% 12%; border-radius: 2px calc(var(--s) * .11) calc(var(--s) * .11) 2px;
+  background: repeating-linear-gradient(180deg, transparent 0 12%, #dfe3ec 12% 15%) content-box, linear-gradient(90deg, #e9e6dc, #fbfaf6 16%); }
+.bk-pages { transform: translateZ(0); box-shadow: 1px 0 0 #d9d6cc, 2.5px .5px 0 #f7f6f1, 3.5px 1px 0 #d3d0c6, 0 calc(var(--s) * .16) calc(var(--s) * .3) calc(var(--s) * -.08) rgba(12, 22, 48, .42); }
+.bk-leaf { transform-origin: 0 50%; transform: translateZ(1px); transition: transform .5s var(--ease); }
+.bk-leaf.l1 { transform: translateZ(2px); }
+.bk-cover { position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d; transform: translateZ(3px); transition: transform .6s var(--spring); }
+.bk-cover img, .bk-in { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: calc(var(--s) * .06) calc(var(--s) * .22) calc(var(--s) * .22) calc(var(--s) * .06); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.bk-cover::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 12%; border-radius: calc(var(--s) * .06) 0 0 calc(var(--s) * .06); transform: translateZ(.5px); background: linear-gradient(90deg, rgba(0,0,0,.34), rgba(255,255,255,.12) 75%, transparent); -webkit-backface-visibility: hidden; backface-visibility: hidden; pointer-events: none; }
+.bk-in { transform: rotateY(180deg); background: linear-gradient(90deg, #141925, #232b3d); }
+@media (hover: hover) {
+  .book:not(.open):hover .bk-cover { transform: translateZ(3px) rotateY(-50deg); }
+  .book:not(.open):hover .l1 { transform: translateZ(2px) rotateY(-14deg); }
+  .book:not(.open):hover::before { opacity: .5; }
+  .chooser:has(.ch-card:hover) .book:not(.open) .bk-cover, .onboard:has(.ch-card:hover, .ob-go:hover) .book:not(.open) .bk-cover { transform: translateZ(3px) rotateY(-28deg); }
+  .chooser:has(.ch-card:hover) .book:not(.open)::before, .onboard:has(.ch-card:hover, .ob-go:hover) .book:not(.open)::before { opacity: .42; }
+}
+.book.peek:not(.open) .bk-cover { transform: translateZ(3px) rotateY(-72deg); }
+.book.peek:not(.open) .l1 { transform: translateZ(2px) rotateY(-22deg); }
+.book.peek:not(.open)::before { opacity: .55; }
+.book.open .bk { transform: translateX(calc(var(--s) * .5)) scale(1.08); transition: transform .75s var(--spring); }
+.book.open .bk-cover { transform: translateZ(3px) rotateY(-172deg); transition: transform .7s cubic-bezier(.25, .8, .25, 1); }
+.book.open .l1 { transform: translateZ(2px) rotateY(-164deg); transition: transform .65s .09s cubic-bezier(.25, .8, .25, 1); }
+.book.open .l2 { transform: translateZ(1px) rotateY(-156deg); transition: transform .6s .17s cubic-bezier(.25, .8, .25, 1); }
+.book.open::before { opacity: .85; transform: scale(1.5); animation: none; }
+.splash .book { animation: logo-in .75s var(--spring) both; }
+.splash.out .book { transform: scale(1.06); transition: transform .4s var(--ease); }
+
+/* a touch of neon on the start screens: follows the mouse on a computer, appears where you tap on a phone */
+.chooser, .onboard { position: relative; isolation: isolate; }
+.chooser::before, .onboard::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .6s ease;
+  background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 30%), color-mix(in srgb, var(--neon) 11%, transparent), color-mix(in srgb, var(--neon2) 5%, transparent) 38%, transparent 66%); }
+.chooser.lit::before, .onboard.lit::before { opacity: 1; }
+.ng { position: relative; isolation: isolate; }
+.ng::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+  background: radial-gradient(150px circle at var(--cx, 50%) var(--cy, 50%), var(--neon), color-mix(in srgb, var(--neon2) 70%, transparent) 45%, transparent 75%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+.ng::before { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .6s ease;
+  background: radial-gradient(130px circle at var(--cx, 50%) var(--cy, 50%), color-mix(in srgb, var(--neon) 14%, transparent), transparent 70%); }
+@media (hover: hover) and (pointer: fine) {
+  .ng:hover::after { opacity: .9; } .ng:hover::before { opacity: 1; }
+  .ch-card.ng:hover { box-shadow: 0 12px 30px -14px color-mix(in srgb, var(--neon) 65%, transparent); }
+}
+.ng.tap::after, .ng.tap::before { opacity: 1; transition: opacity .08s; }
+.chooser.leaving .ch-inner > :not(.book), .onboard.leaving .ob-card > :not(.book), .chooser.leaving .page-foot, .onboard.leaving .page-foot, .onboard.leaving .corner-help { animation: fade-out .32s ease forwards; }
+.corner-help { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--muted); display: grid; place-items: center; cursor: pointer; padding: 0; animation: fade-in .6s .3s both; }
+.corner-help svg { width: 20px; height: 20px; }
+.ch-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* help */
+.helpdlg .dbody { gap: 12px; }
+.help-search { margin: 0; }
+.helpbody { display: grid; gap: 14px; }
+.hsec { animation: rise .45s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+.hsec h3 { margin: 4px 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.hsec details { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin-bottom: 8px; transition: border-color .2s; }
+.hsec details[open] { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.hsec summary { cursor: pointer; padding: 13px 16px; font-weight: 650; list-style: none; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.hsec summary::-webkit-details-marker { display: none; }
+.hsec summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--faint); border-bottom: 2px solid var(--faint); transform: rotate(45deg) translateY(-2px); transition: transform .3s var(--spring); flex: none; }
+.hsec details[open] summary { color: var(--accent); }
+.hsec details[open] summary::after { transform: rotate(225deg) translate(-1px, -1px); border-color: var(--accent); }
+.ha { padding: 0 16px 12px; font-size: 14.5px; line-height: 1.55; }
+details[open] .ha { animation: rise .3s var(--ease) both; }
+.ha p { margin: 0 0 8px; } .ha ul { margin: 0 0 8px; padding-left: 20px; } .ha li { margin: 4px 0; }
+.ha a { color: var(--accent); font-weight: 600; }
+#set-help svg { margin-right: 6px; }
+
+/* AI helper and Google Drive */
+.drive { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); margin: 4px 0; }
+.drive .lbl { font-weight: 700; font-size: 13px; }
+#ai-sec .seg { width: max-content; max-width: 100%; }
+.hint.err { color: var(--danger); }
+a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bk-cover img { box-shadow: 0 0 0 1px rgba(255,255,255,.12); } :root:not([data-theme="light"]) .book::before { opacity: .38; } }
+:root[data-theme="dark"] .bk-cover img { box-shadow: 0 0 0 1px rgba(255,255,255,.12); }
+:root[data-theme="dark"] .book::before { opacity: .38; }
+.empty-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+.syncbar .sb-cloud { display: grid; place-items: center; color: var(--accent); }
+.syncbar .sb-cloud svg { width: 20px; height: 20px; }
+.updbar:not([hidden]) ~ .syncbar { top: calc(70px + env(safe-area-inset-top, 0px)); }
+@media (max-width: 520px) { .syncbar > span:nth-child(2) { flex: 1 1 calc(100% - 40px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
 
 <div class="splash" id="splash">
-  <img src="icon-cs-192.png" alt="" width="92" height="92">
+  <div class="book" data-book style="--s:96px" aria-hidden="true"><div class="bk"><div class="bk-pages"></div><div class="bk-leaf l2"></div><div class="bk-leaf l1"></div><div class="bk-cover"><img src="icon-cs-192.png" alt="" draggable="false"><i class="bk-in"></i></div></div></div>
   <div class="sp-name" data-i18n="app">Словник</div>
   <div class="credit sp-credit" data-credit></div>
   <div class="sp-status" id="sp-status"></div>
 </div>
 
 <div class="onboard" id="onboard" hidden>
+  <button class="corner-help ng" type="button" id="ob-help" data-i18n-aria="help" data-i18n-title="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4.1"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg></button>
   <div class="ob-card">
-    <img class="ch-logo" src="icon-cs-192.png" alt="" width="64" height="64">
+    <div class="book" data-book style="--s:68px" aria-hidden="true"><div class="bk"><div class="bk-pages"></div><div class="bk-leaf l2"></div><div class="bk-leaf l1"></div><div class="bk-cover"><img src="icon-cs-192.png" alt="" draggable="false"><i class="bk-in"></i></div></div></div>
     <div class="ob-dots" id="ob-dots"><i></i><i></i><i></i></div>
     <section class="ob-step" data-step="0">
       <h1 data-i18n="ob_hi"></h1>
       <h2 data-i18n="ob_lang"></h2>
       <p data-i18n="ob_lang_p"></p>
       <div class="ob-opts" id="ob-langs">
-        <button class="ob-opt" type="button" data-lang="uk">Українська</button><button class="ob-opt" type="button" data-lang="en">English</button>
-        <button class="ob-opt" type="button" data-lang="cs">Čeština</button><button class="ob-opt" type="button" data-lang="ru">Русский</button>
+        <button class="ob-opt ng" type="button" data-lang="uk">Українська</button><button class="ob-opt ng" type="button" data-lang="en">English</button>
+        <button class="ob-opt ng" type="button" data-lang="cs">Čeština</button><button class="ob-opt ng" type="button" data-lang="ru">Русский</button>
       </div>
-      <div class="ob-nav"><span></span><button class="btn primary" type="button" data-ob="1" data-i18n="next"></button></div>
+      <div class="ob-nav"><span></span><button class="btn primary ng" type="button" data-ob="1" data-i18n="next"></button></div>
     </section>
     <section class="ob-step" data-step="1" hidden>
       <h1 data-i18n="choose"></h1>
       <div class="ch-cards">
-        <button class="ch-card cz" type="button" data-learn="cs"><span class="ch-k">CZ</span><b>Čeština</b><small data-i18n="ln_cs"></small></button>
-        <button class="ch-card en" type="button" data-learn="en"><span class="ch-k">EN</span><b>English</b><small data-i18n="ln_en"></small></button>
+        <button class="ch-card cz ng" type="button" data-learn="cs"><span class="ch-k">CZ</span><b>Čeština</b><small data-i18n="ln_cs"></small></button>
+        <button class="ch-card en ng" type="button" data-learn="en"><span class="ch-k">EN</span><b>English</b><small data-i18n="ln_en"></small></button>
       </div>
       <div class="ob-nav"><button class="btn" type="button" data-ob="0" data-i18n="back"></button><span></span></div>
     </section>
     <section class="ob-step" data-step="2" hidden>
       <h1 data-i18n="tr_h"></h1>
       <div class="trp" id="ob-tr"></div>
-      <div class="ob-nav"><button class="btn" type="button" data-ob="1" data-i18n="back"></button><button class="btn primary" type="button" id="ob-go" data-i18n="ob_go"></button></div>
+      <div class="ob-nav"><button class="btn" type="button" data-ob="1" data-i18n="back"></button><button class="btn primary ng ob-go" type="button" id="ob-go" data-i18n="ob_go"></button></div>
     </section>
   </div>
   <footer class="credit page-foot" data-credit></footer>
@@ -530,17 +635,29 @@ dialog.wide { width: min(760px, calc(100vw - 24px)); }
 
 <div class="chooser" id="chooser" hidden>
   <div class="ch-inner">
-    <img class="ch-logo" src="icon-cs-192.png" alt="" width="76" height="76">
+    <div class="book" data-book style="--s:84px" aria-hidden="true"><div class="bk"><div class="bk-pages"></div><div class="bk-leaf l2"></div><div class="bk-leaf l1"></div><div class="bk-cover"><img src="icon-cs-192.png" alt="" draggable="false"><i class="bk-in"></i></div></div></div>
     <h1 data-i18n="app">Словник</h1>
     <p data-i18n="choose">Що вчимо?</p>
     <div class="ch-cards">
-      <button class="ch-card cz" type="button" data-dict="cs"><span class="ch-k">CZ</span><b>Čeština</b><small id="ch-cs"></small></button>
-      <button class="ch-card en" type="button" data-dict="en"><span class="ch-k">EN</span><b>English</b><small id="ch-en"></small></button>
+      <button class="ch-card cz ng" type="button" data-dict="cs"><span class="ch-k">CZ</span><b>Čeština</b><small id="ch-cs"></small></button>
+      <button class="ch-card en ng" type="button" data-dict="en"><span class="ch-k">EN</span><b>English</b><small id="ch-en"></small></button>
     </div>
-    <button class="btn" type="button" id="ch-settings" data-i18n="settings">Налаштування</button>
+    <div class="ch-btns"><button class="btn ng" type="button" id="ch-settings" data-i18n="settings">Налаштування</button><button class="btn ng" type="button" id="ch-help" data-i18n="help"></button></div>
     <span class="ver" id="ch-ver"></span>
   </div>
   <footer class="credit page-foot" data-credit></footer>
+</div>
+
+<div class="updbar" id="updbar" role="status" hidden>
+  <span class="upd-dot" aria-hidden="true"></span><span id="upd-text"></span>
+  <button class="btn sm primary" type="button" id="upd-go" data-i18n="upd_now"></button>
+  <button class="upd-x" type="button" id="upd-x" data-i18n-aria="close">✕</button>
+</div>
+
+<div class="updbar syncbar" id="syncbar" role="status" hidden>
+  <span class="sb-cloud" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 9.5z"/><path d="m9.5 13 2.5-2.5 2.5 2.5M12 10.5V16"/></svg></span><span data-i18n="sb_text"></span>
+  <button class="btn sm primary" type="button" id="sb-go" data-i18n="drive_now"></button>
+  <button class="upd-x" type="button" id="sb-x" data-i18n-aria="close">✕</button>
 </div>
 
 <div id="app" hidden>
@@ -558,6 +675,7 @@ dialog.wide { width: min(760px, calc(100vw - 24px)); }
           <button class="btn" type="button" id="photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg><span data-i18n="photo">Фото</span></button>
           <button class="btn" type="button" id="add" data-i18n="add_word">+ Слово</button>
         </div>
+        <button class="btn icon" type="button" id="help-btn" data-i18n-aria="help" data-i18n-title="help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4.1"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg></button>
         <button class="btn icon" type="button" id="settings-btn" data-i18n-aria="settings" data-i18n-title="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.830-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
       </div>
       <div class="stats" id="stats"></div>
@@ -718,9 +836,30 @@ dialog.wide { width: min(760px, calc(100vw - 24px)); }
       <div class="seg" id="themeseg">
         <button type="button" data-theme-v="auto" data-i18n="th_auto"></button><button type="button" data-theme-v="light" data-i18n="th_light"></button><button type="button" data-theme-v="dark" data-i18n="th_dark"></button>
       </div>
+      <label class="toggle" for="s-sound"><span data-i18n="s_sound"></span><input type="checkbox" id="s-sound"></label>
     </div>
     <div class="dsec">
+      <h3 data-i18n="s_sync"></h3>
       <div class="syncline" id="syncline"><i></i><span id="synctext"></span></div>
+      <p class="hint" id="sync-move" hidden></p>
+      <div class="drive" id="drive-sec" hidden>
+        <span class="lbl" data-i18n="drive_h"></span>
+        <div class="syncline" id="drive-state"><i></i><span id="drive-status"></span></div>
+        <div class="btns"><button class="btn primary" type="button" id="drive-connect" data-i18n="drive_connect"></button><button class="btn primary" type="button" id="drive-now" data-i18n="drive_now" hidden></button><button class="btn" type="button" id="drive-off" data-i18n="drive_off" hidden></button></div>
+      </div>
+      <div class="btns">
+        <button class="btn" type="button" id="sync-copy" data-i18n="copy_words"></button>
+      </div>
+    </div>
+    <div class="dsec" id="ai-sec" hidden>
+      <h3 data-i18n="ai_h"></h3>
+      <p class="hint" data-i18n="ai_p"></p>
+      <div class="seg" id="ai-seg"><button type="button" data-ai="gemini">Gemini</button><button type="button" data-ai="openai">OpenAI</button></div>
+      <div class="syncline" id="ai-state"><i></i><span id="ai-status"></span></div>
+      <div class="field"><input id="ai-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" data-i18n-aria="ai_key_ph"></div>
+      <p class="hint" id="ai-note"></p>
+      <div class="btns"><button class="btn primary" type="button" id="ai-check" data-i18n="ai_check"></button><button class="btn" type="button" id="ai-remove" data-i18n="ai_remove" hidden></button><a class="btn" id="ai-get" target="_blank" rel="noopener"></a></div>
+      <p class="hint" id="ai-msg" hidden></p>
     </div>
     <div class="dsec">
       <h3 data-i18n="backup_h"></h3>
@@ -756,8 +895,18 @@ dialog.wide { width: min(760px, calc(100vw - 24px)); }
     <div class="dsec">
       <h3 data-i18n="s_about"></h3>
       <p class="ver" id="set-ver"></p>
+      <div class="btns"><button class="btn" type="button" id="set-help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4.1"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg><span data-i18n="help_h"></span></button></div>
       <p class="credit" data-credit style="text-align:left"></p>
     </div>
+  </div>
+</dialog>
+
+<dialog id="helpdlg" class="wide helpdlg">
+  <div class="dbody">
+    <div class="dtop"><h2 data-i18n="help_h"></h2><button class="xbtn" type="button" data-close data-i18n-aria="close">✕</button></div>
+    <label class="search help-search" for="help-q"><input id="help-q" type="search" data-i18n-ph="help_ph" autocomplete="off"></label>
+    <div id="helpbody" class="helpbody"></div>
+    <p class="credit" data-credit></p>
   </div>
 </dialog>
 
@@ -1086,10 +1235,251 @@ Object.assign(I18N, {
   rv_no_refill: ["Переклади залишились від старого варіанта — перевір їх після додавання.", "The translations are still from the old guess, check them after adding.", "Překlady zůstaly z původního odhadu, zkontroluj je po přidání.", "Переводы остались от старого варианта — проверь их после добавления."],
 });
 
+/* v0.6 strings: [uk, en, cs, ru] */
+Object.assign(I18N, {
+  sync_cloud: ["Синхронізація увімкнена. Увійди в Claude з тим самим акаунтом на телефоні й комп'ютері — і побачиш ті самі слова. Словник особистий: інші люди його не бачать.", "Sync is on. Sign in to Claude with the same account on your phone and computer and you'll see the same words. Your dictionary is personal: nobody else sees it.", "Synchronizace je zapnutá. Přihlas se do Claude stejným účtem na telefonu i počítači a uvidíš stejná slova. Slovník je osobní: nikdo jiný ho nevidí.", "Синхронизация включена. Войди в Claude с тем же аккаунтом на телефоне и компьютере — и увидишь те же слова. Словарь личный: другие люди его не видят."],
+  sync_to_web: ["Щоб перенести слова на сайт: «Скопіювати мої слова» → на сайті Налаштування → Імпорт → встав.", "To move your words to the website: tap “Copy my words”, then on the website go to Settings → Import and paste.", "Přesun slov na web: „Zkopírovat moje slova“ → na webu Nastavení → Import → vložit.", "Чтобы перенести слова на сайт: «Скопировать мои слова» → на сайте Настройки → Импорт → вставь."],
+  sync_local: ["Слова зберігаються на цьому пристрої — навіть якщо закрити застосунок. Для синхронізації між телефоном і комп'ютером використовуй версію в Claude: «Скопіювати мої слова» → у версії в Claude Налаштування → Імпорт → встав.", "Words are saved on this device, even if you close the app. To sync between your phone and computer, use the Claude version: tap “Copy my words”, then in the Claude version go to Settings → Import and paste.", "Slova jsou uložená v tomto zařízení, i když aplikaci zavřeš. Pro synchronizaci mezi telefonem a počítačem použij verzi v Claude: „Zkopírovat moje slova“ → ve verzi v Claude Nastavení → Import → vložit.", "Слова хранятся на этом устройстве — даже если закрыть приложение. Для синхронизации между телефоном и компьютером используй версию в Claude: «Скопировать мои слова» → в версии в Claude Настройки → Импорт → вставь."],
+  sync_view: ["Слова зберігаються на цьому пристрої. Щоб синхронізувати їх між пристроями, попроси власника цієї сторінки дати тобі доступ на редагування.", "Words are saved on this device. To sync them between devices, ask the owner of this page for edit access.", "Slova jsou uložená v tomto zařízení. Pro synchronizaci mezi zařízeními požádej vlastníka této stránky o přístup k úpravám.", "Слова хранятся на этом устройстве. Чтобы синхронизировать их между устройствами, попроси владельца этой страницы дать тебе доступ на редактирование."],
+  af_hint: ["Напиши слово або переклад і натисни: переклади й вимова підтягнуться з безкоштовних онлайн-словників. Повний запис (множина, синоніми, пояснення, нотатка, приклади) заповнює версія в Claude.", "Type the word or a translation and tap: translations and pronunciation come from free online dictionaries. For a complete entry (plural, synonyms, explanation, note, examples), add the word in the Claude version.", "Napiš slovo nebo překlad a klepni: překlady a výslovnost se doplní z bezplatných online slovníků. Úplný záznam (množné číslo, synonyma, vysvětlení, poznámka, příklady) vyplní verze v Claude.", "Напиши слово или перевод и нажми: переводы и произношение подтянутся из бесплатных онлайн-словарей. Полную запись (множественное число, синонимы, объяснение, заметка, примеры) заполняет версия в Claude."],
+  sync_noid: ["Слова зберігаються на цьому пристрої. Для синхронізації увійди в Claude з акаунтом, якому відкрили доступ до цієї сторінки.", "Words are saved on this device. To sync, sign in to Claude with an account that was given access to this page.", "Slova jsou uložená v tomto zařízení. Pro synchronizaci se přihlas do Claude účtem, který má přístup k této stránce.", "Слова хранятся на этом устройстве. Для синхронизации войди в Claude с аккаунтом, которому открыли доступ к этой странице."],
+  copy_words: ["Скопіювати мої слова", "Copy my words", "Zkopírovat moje slova", "Скопировать мои слова"],
+  open_claude: ["Відкрити версію в Claude", "Open the Claude version", "Otevřít verzi v Claude", "Открыть версию в Claude"],
+  s_sync: ["Синхронізація", "Sync", "Synchronizace", "Синхронизация"],
+  s_sound: ["Звуки", "Sounds", "Zvuky", "Звуки"],
+  upd_ready: ["Вийшла версія {0}.", "Version {0} is out.", "Vyšla verze {0}.", "Вышла версия {0}."],
+  upd_safe: ["Слова збережуться.", "Your words stay saved.", "Slova zůstanou.", "Слова сохранятся."],
+  upd_now: ["Оновити", "Update", "Aktualizovat", "Обновить"],
+  mig_done: ["Твої слова тепер в особистому словнику — він синхронізується між твоїми пристроями.", "Your words are now in your personal dictionary. It syncs between your devices.", "Tvoje slova jsou teď v osobním slovníku. Synchronizuje se mezi tvými zařízeními.", "Твои слова теперь в личном словаре — он синхронизируется между твоими устройствами."],
+  sync_off_here: ["Цей акаунт не може зберігати тут у хмару, тому слова зберігаються на цьому пристрої.", "This account can't save to the cloud here, so words are saved on this device.", "Tento účet sem nemůže ukládat do cloudu, slova se ukládají v tomto zařízení.", "Этот аккаунт не может сохранять здесь в облако, поэтому слова сохраняются на этом устройстве."],
+  sync_pending: ["Зберігаю зміни: {0}.", "Saving changes: {0}.", "Ukládám změny: {0}.", "Сохраняю изменения: {0}."],
+  cloud_full: ["Хмарне сховище заповнене, тому цю зміну збережено лише на цьому пристрої.", "Cloud storage is full, so this change was saved on this device only.", "Cloudové úložiště je plné, tato změna je uložená jen v tomto zařízení.", "Облачное хранилище заполнено, поэтому это изменение сохранено только на этом устройстве."],
+  af_claude_hint: ["Напиши слово будь-якою своєю мовою — Claude знайде чеське слово й допише все: переклади, множину, синоніми, пояснення, нотатку, приклади.", "Type the word in any of your languages. Claude finds the word and fills in everything: translations, plural, synonyms, explanation, note and examples.", "Napiš slovo v kterémkoli svém jazyce. Claude najde slovo a doplní vše: překlady, množné číslo, synonyma, vysvětlení, poznámku a příklady.", "Напиши слово на любом своём языке — Claude найдёт слово и допишет всё: переводы, множественное число, синонимы, объяснение, заметку, примеры."],
+});
+
+/* v0.7 strings: [uk, en, cs, ru] */
+Object.assign(I18N, {
+  help: ["Довідка", "Help", "Nápověda", "Справка"],
+  help_h: ["Довідка й часті питання", "Help & FAQ", "Nápověda a časté otázky", "Справка и частые вопросы"],
+  help_ph: ["Пошук у довідці", "Search help", "Hledat v nápovědě", "Поиск в справке"],
+  help_none: ["Нічого не знайдено. Спробуй інше слово.", "Nothing found. Try another word.", "Nic nenalezeno. Zkus jiné slovo.", "Ничего не найдено. Попробуй другое слово."],
+  empty_active: ["Тут поки порожньо — це твій чистий аркуш. Додай перші слова кнопкою «+ Слово» або «Фото».", "Nothing here yet: this is your blank page. Add your first words with “+ Word” or “Photo”.", "Zatím tu nic není: tohle je tvůj čistý list. Přidej první slova tlačítkem „+ Slovo“ nebo „Fotka“.", "Пока пусто — это твой чистый лист. Добавь первые слова кнопкой «+ Слово» или «Фото»."],
+  ai_h: ["Помічник ШІ", "AI helper", "Pomocník AI", "Помощник ИИ"],
+  ai_p: ["Підключи свій ШІ, щоб тут працювали «Фото» й повне автозаповнення ✨. Ключ зберігається лише на цьому пристрої й витрачає тільки твій власний ліміт.", "Connect your own AI so Photo and full ✨ autofill work here. The key stays on this device and only uses your own limits.", "Připoj vlastní AI, aby tu fungovala Fotka a úplné doplňování ✨. Klíč zůstane jen v tomto zařízení a čerpá jen tvoje vlastní limity.", "Подключи свой ИИ, чтобы здесь работали «Фото» и полное автозаполнение ✨. Ключ хранится только на этом устройстве и тратит только твой собственный лимит."],
+  ai_key_ph: ["Встав ключ API", "Paste your API key", "Vlož klíč API", "Вставь ключ API"],
+  ai_check: ["Зберегти й перевірити", "Save and check", "Uložit a ověřit", "Сохранить и проверить"],
+  ai_remove: ["Прибрати ключ", "Remove key", "Odebrat klíč", "Убрать ключ"],
+  ai_get_gemini: ["Отримати безкоштовний ключ Gemini ↗", "Get a free Gemini key ↗", "Získat bezplatný klíč Gemini ↗", "Получить бесплатный ключ Gemini ↗"],
+  ai_get_openai: ["Отримати ключ OpenAI ↗", "Get an OpenAI key ↗", "Získat klíč OpenAI ↗", "Получить ключ OpenAI ↗"],
+  ai_note_gemini: ["Безкоштовно, з денними лімітами. На безкоштовному рівні Google може використовувати надіслане для покращення своїх продуктів, тож не надсилай нічого приватного.", "Free, with daily limits. On the free tier Google may use what you send to improve its products, so don't send anything private.", "Zdarma, s denními limity. V bezplatné úrovni může Google odeslané použít ke zlepšení svých produktů, takže neposílej nic soukromého.", "Бесплатно, с дневными лимитами. На бесплатном уровне Google может использовать отправленное для улучшения своих продуктов, поэтому не отправляй ничего личного."],
+  ai_note_openai: ["Платно за використання: на акаунті OpenAI API мають бути кошти (це окремо від підписки ChatGPT).", "Paid per use: the OpenAI API account needs credit (separate from a ChatGPT subscription).", "Placené podle použití: účet OpenAI API potřebuje kredit (zvlášť od předplatného ChatGPT).", "Платно за использование: на аккаунте OpenAI API должны быть средства (это отдельно от подписки ChatGPT)."],
+  ai_on: ["Підключено: {0}", "Connected: {0}", "Připojeno: {0}", "Подключено: {0}"],
+  ai_off: ["Не підключено. Без ШІ працює все, крім фото й повного автозаповнення.", "Not connected. Everything works without AI except photos and full autofill.", "Nepřipojeno. Bez AI funguje vše kromě fotek a úplného doplňování.", "Не подключено. Без ИИ работает всё, кроме фото и полного автозаполнения."],
+  ai_need_key: ["Спершу встав ключ.", "Paste a key first.", "Nejdřív vlož klíč.", "Сначала вставь ключ."],
+  ai_checking: ["Перевіряю ключ…", "Checking the key…", "Ověřuji klíč…", "Проверяю ключ…"],
+  ai_ok: ["Готово! {0} підключено: тепер «Фото» й ✨ працюють повністю.", "Done! {0} is connected: Photo and ✨ now work fully.", "Hotovo! {0} je připojené: Fotka a ✨ teď fungují naplno.", "Готово! {0} подключён: теперь «Фото» и ✨ работают полностью."],
+  ai_removed: ["Ключ прибрано з цього пристрою.", "Key removed from this device.", "Klíč odebrán z tohoto zařízení.", "Ключ удалён с этого устройства."],
+  ai_err_key: ["Ключ не підходить. Перевір, що скопіював його повністю.", "That key doesn't work. Check that you copied all of it.", "Klíč nefunguje. Zkontroluj, že jsi ho zkopíroval celý.", "Ключ не подходит. Проверь, что скопировал его полностью."],
+  ai_err_quota: ["Ліміт вичерпано або на акаунті немає коштів. Спробуй пізніше.", "The limit is used up or the account has no credit. Try later.", "Limit je vyčerpaný nebo účet nemá kredit. Zkus to později.", "Лимит исчерпан или на аккаунте нет средств. Попробуй позже."],
+  ai_err_offline: ["Немає інтернету.", "No internet connection.", "Není připojení k internetu.", "Нет интернета."],
+  ai_err_model: ["З цим ключем немає доступу до потрібної моделі.", "This key can't use a suitable model.", "S tímto klíčem není dostupný vhodný model.", "С этим ключом нет доступа к подходящей модели."],
+  drive_h: ["Google Диск", "Google Drive", "Google Disk", "Google Диск"],
+  drive_connect: ["Підключити Google Диск", "Connect Google Drive", "Připojit Google Disk", "Подключить Google Диск"],
+  drive_now: ["Синхронізувати", "Sync now", "Synchronizovat", "Синхронизировать"],
+  drive_off: ["Відключити", "Disconnect", "Odpojit", "Отключить"],
+  drive_unset: ["Синхронізацію через Google Диск на цьому сайті ще не налаштовано.", "Google Drive sync isn't set up on this site yet.", "Synchronizace přes Google Disk zatím na tomto webu není nastavená.", "Синхронизация через Google Диск на этом сайте ещё не настроена."],
+  drive_offline: ["Підключи свій Google Диск — і слова будуть однакові на телефоні й комп'ютері. Вони зберігаються в прихованій папці застосунку на твоєму Диску; бачиш їх лише ти.", "Connect your Google Drive to have the same words on your phone and computer. They're kept in a hidden app folder in your own Drive that only you can access.", "Připoj svůj Google Disk a budeš mít stejná slova v telefonu i počítači. Ukládají se do skryté složky aplikace na tvém Disku, ke které máš přístup jen ty.", "Подключи свой Google Диск — и слова будут одинаковыми на телефоне и компьютере. Они хранятся в скрытой папке приложения на твоём Диске; доступ к ним есть только у тебя."],
+  drive_on: ["Підключено.", "Connected.", "Připojeno.", "Подключено."],
+  drive_syncing: ["Синхронізую…", "Syncing…", "Synchronizuji…", "Синхронизирую…"],
+  drive_last: ["Підключено · остання синхронізація: {0}", "Connected · last synced {0}", "Připojeno · naposledy {0}", "Подключено · последняя синхронизация: {0}"],
+  drive_connected: ["Google Диск підключено, слова синхронізовано.", "Google Drive is connected and your words are synced.", "Google Disk je připojený a slova jsou synchronizovaná.", "Google Диск подключён, слова синхронизированы."],
+  drive_done: ["Синхронізовано.", "Synced.", "Synchronizováno.", "Синхронизировано."],
+  drive_fail: ["Не вдалося синхронізувати з Google Диском. Спробуй ще раз.", "Couldn't sync with Google Drive. Try again.", "Synchronizace s Google Diskem se nepovedla. Zkus to znovu.", "Не удалось синхронизировать с Google Диском. Попробуй ещё раз."],
+  drive_disconnected: ["Google Диск відключено. Слова лишились на цьому пристрої.", "Google Drive disconnected. Your words stay on this device.", "Google Disk odpojen. Slova zůstala v tomto zařízení.", "Google Диск отключён. Слова остались на этом устройстве."],
+  drive_wait: ["Хвилинку, з'єднуюся з Google… Натисни ще раз.", "One moment, connecting to Google… Tap again.", "Moment, připojuji se ke Googlu… Klepni znovu.", "Минутку, соединяюсь с Google… Нажми ещё раз."],
+  sb_text: ["Синхронізуй слова з Google Диском", "Sync your words with Google Drive", "Synchronizuj slova s Google Diskem", "Синхронизируй слова с Google Диском"],
+  sync_local: ["Слова зберігаються на цьому пристрої — навіть якщо закрити застосунок.", "Words are saved on this device, even if you close the app.", "Slova jsou uložená v tomto zařízení, i když aplikaci zavřeš.", "Слова хранятся на этом устройстве — даже если закрыть приложение."],
+  claude_h: ["Нові слова через чат ШІ", "New words via an AI chat", "Nová slova přes chat s AI", "Новые слова через чат с ИИ"],
+  claude_p: ["Скопіюй інструкцію й надішли її в будь-який чат ШІ (ChatGPT, Gemini, Claude) разом із фото, голосовим чи списком слів. Відповідь встав в Імпорт вище.", "Copy the instructions and send them to any AI chat (ChatGPT, Gemini, Claude) with a photo, voice note or list of words. Paste the answer into Import above.", "Zkopíruj návod a pošli ho do libovolného chatu s AI (ChatGPT, Gemini, Claude) s fotkou, hlasovkou nebo seznamem slov. Odpověď vlož do Importu výše.", "Скопируй инструкцию и отправь её в любой чат с ИИ (ChatGPT, Gemini, Claude) вместе с фото, голосовым или списком слов. Ответ вставь в Импорт выше."],
+  prompt_copied: ["Інструкцію скопійовано — встав її в чат ШІ", "Instructions copied. Paste them into an AI chat", "Návod zkopírován, vlož ho do chatu s AI", "Инструкция скопирована — вставь её в чат с ИИ"],
+  import_p: ["Обери файл або встав текст: резервну копію чи відповідь із чату ШІ.", "Choose a file or paste text: a backup or an answer from an AI chat.", "Vyber soubor nebo vlož text: zálohu nebo odpověď z chatu s AI.", "Выбери файл или вставь текст: резервную копию или ответ из чата с ИИ."],
+  imp_bad: ["Не бачу тут даних. Встав усю відповідь із чату ШІ або обери файл резервної копії.", "No data found here. Paste the whole answer from the AI chat or choose a backup file.", "Nevidím tu data. Vlož celou odpověď z chatu s AI nebo vyber soubor zálohy.", "Не вижу здесь данных. Вставь весь ответ из чата с ИИ или выбери файл резервной копии."],
+  ph_local_p: ["Без ключа ШІ: 1) скопіюй інструкцію; 2) надішли її разом із фото в будь-який чат ШІ (ChatGPT, Gemini, Claude); 3) скопіюй відповідь; 4) натисни «Вставити відповідь». Або підключи свій ШІ в Налаштуваннях — тоді все робиться тут.", "Without an AI key: 1) copy the instructions; 2) send them with the photo to any AI chat (ChatGPT, Gemini, Claude); 3) copy the answer; 4) tap “Paste answer”. Or connect your own AI in Settings and it all happens right here.", "Bez klíče AI: 1) zkopíruj návod; 2) pošli ho s fotkou do libovolného chatu s AI (ChatGPT, Gemini, Claude); 3) zkopíruj odpověď; 4) klepni na „Vložit odpověď“. Nebo si v Nastavení připoj vlastní AI a vše proběhne přímo tady.", "Без ключа ИИ: 1) скопируй инструкцию; 2) отправь её вместе с фото в любой чат с ИИ (ChatGPT, Gemini, Claude); 3) скопируй ответ; 4) нажми «Вставить ответ». Или подключи свой ИИ в Настройках — тогда всё происходит здесь."],
+  home_p: ["iPhone: Safari → «Поділитися» → «На початковий екран». Android: Chrome → ⋮ → «Додати на головний екран». Детально — у Довідці.", "iPhone: Safari → Share → Add to Home Screen. Android: Chrome → ⋮ → Add to home screen. More in Help.", "iPhone: Safari → Sdílet → Přidat na plochu. Android: Chrome → ⋮ → Přidat na plochu. Víc v Nápovědě.", "iPhone: Safari → «Поделиться» → «На экран „Домой“». Android: Chrome → ⋮ → «Добавить на главный экран». Подробнее — в Справке."],
+});
+
+/* Help & FAQ: [section, [[question, answer], …]] per interface language. Answers: blank line = new paragraph, "- " = list, **bold**, [text](url). */
+const HELP = {
+en: [
+ ["Getting started", [
+  ["What is this app?", "Your own dictionary for learning Czech or English. Each word can have translations, plural, a colour for its gender, synonyms, an explanation, a note and example sentences. Words are kept in topics, and you practise them with flip cards."],
+  ["Website or Claude version: what's the difference?", "- **Website**: free and works in any browser. Words are saved on your device. To sync between devices, connect your own Google Drive. For AI help, add your own key: Gemini has a free tier, OpenAI is paid.\n- **Claude version**: opens inside Claude. Sync and AI are built in and use your own Claude account. Someone has to share it with you first.\n\nBoth work the same way, and you can move words between them (see “Sync and backup”)."],
+  ["How do I put the app on my home screen?", "- **iPhone / iPad**: open the site in Safari, tap Share (the square with an arrow), then **Add to Home Screen** → **Add**.\n- **Android**: open the site in Chrome, tap ⋮, then **Add to home screen** or **Install app**.\n- **Computer**: in Chrome or Edge, click the install icon at the right end of the address bar (or ⋮ → **Install**).\n\nOn iPhone this also keeps your words safer: Safari can clear the data of websites you haven't opened for a while, but not of apps on the home screen."],
+  ["How do I change the languages?", "Settings → Languages. The interface can be Ukrainian, English, Czech or Russian, and explanations, notes and example translations follow it. For each dictionary you choose a main translation and, if you like, an additional one shown in smaller text."],
+ ]],
+ ["Words", [
+  ["How do I add a word?", "Tap **+ Word**, type the word and at least one translation, choose a topic and save. The ✨ button fills in the rest for you."],
+  ["What does the ✨ button fill in?", "With AI (the Claude version, or your own AI key on the website) it fills in everything: translations, transcription, plural, gender, synonyms, explanation, a note when it helps, example sentences and the topic. You can type the word in any of your languages, even in the wrong field, and it finds the right word.\n\nWithout AI the website uses free online dictionaries, so you only get translations and pronunciation."],
+  ["How do I add words from a photo?", "Tap **Photo**, add up to 10 photos of your notebook or textbook (or type a list), then start. The AI reads every photo, fills in each word and sorts the words into topics. Words it isn't sure about come first, with the spot on the photo marked, so you can pick the right word, type it yourself or skip it. Tick the words you want and tap Add.\n\nNo AI key on the website? Copy the instructions, send them with the photo to any AI chat (ChatGPT, Gemini, Claude), then paste the answer back."],
+  ["What do the colours and symbols mean?", "- Blue: masculine, red: feminine, green: neuter. A lighter shade marks the plural.\n- **pl.** plural form · **≈** synonyms · **!** a note worth knowing\n- **[…]** how to read the Czech word (**:** is a long sound) · **/…/** English pronunciation\n\nTap a word to see everything about it."],
+  ["How do I edit, move or delete words?", "Tap ⋯ next to a word to edit it, move it to another topic, archive it or delete it. For many words at once, tap **Select**, tick the words and choose what to do.\n- **Archive** is for words you already know: they leave the list and practice but stay saved.\n- **Trash** keeps deleted words until you delete them forever, so you can always restore them."],
+  ["Topics, search and hiding", "Tap a topic's name to fold it, or tap the chips at the top to jump to a topic. The search box finds words in any language. **Hide translation** and **Hide word** turn the list into a quick self-test."],
+ ]],
+ ["Practice", [
+  ["How does practice work?", "Tap **Practice** (or Practice next to a topic), choose what to practise and how: word → translation, translation → word, a mix, explanation → word, or the additional language. Tap the card to flip it. Swipe right (✓) if you know it, left (✕) to see it again. Missed words come back until you get them, and at the end you see which ones to work on.\n\nOn a computer: Space flips the card, → means I know, ← means again."],
+ ]],
+ ["Sync and backup", [
+  ["How does sync work?", "**Claude version**: sign in to Claude with the same account on your phone and computer and open the same link. Every change is saved at once and appears on the other device.\n\n**Website**: Settings → Sync → **Connect Google Drive** and choose your Google account. Your words are saved in a hidden app folder in your own Google Drive. On the other device, connect the same Google account. Google lets a website stay signed in for about an hour, so after that the app shows **Sync** at the top: one tap and you're up to date.\n\nChanges from both devices are combined word by word, so nothing gets lost."],
+  ["Is my dictionary private?", "Yes. On the website your words stay on your device, and in your own Google Drive if you connect it. In the Claude version every person has their own dictionary that nobody else can see, not even the person who shared the page."],
+  ["Can I lose my words if I close the app or it updates?", "No. Every change is saved straight away. Updates never delete words, and before an update the website keeps a safety copy. For extra safety make a backup now and then: Settings → Backup → **Download file**."],
+  ["How do I move words to another device or between the website and the Claude version?", "On the first one: Settings → **Copy my words** (or Backup → Download file). On the other one: Settings → Import → paste the text or choose the file → **Add to my words**. Nothing is overwritten: new words are added and missing details are filled in."],
+  ["How do updates work?", "The website shows **Version X is out** at the top: tap **Update**. Your words stay. The Claude version updates by itself. The version number is at the bottom of the app and in Settings."],
+ ]],
+ ["AI", [
+  ["Do I need AI?", "No. Everything works without it. AI only saves time: it fills in words for you and reads photos."],
+  ["Who pays for the AI?", "Everyone uses their own. In the Claude version it runs on the Claude account of whoever is using it. On the website it uses your own key: Gemini has a free tier, OpenAI is paid per use. Nobody else's money or limits are used."],
+  ["How do I get a free Gemini key?", "- Open [Google AI Studio](https://aistudio.google.com/apikey) and sign in with Google.\n- Tap **Create API key** and copy it.\n- In the app: Settings → AI helper → **Gemini** → paste the key → **Save and check**.\n\nOn the free tier Google may use what you send to improve its products, so don't send anything private. Free use has daily limits; if you reach one, try again later."],
+  ["Can I use ChatGPT / OpenAI?", "Yes, with an API key from [platform.openai.com](https://platform.openai.com/api-keys). The API is paid separately from a ChatGPT subscription, so that account needs credit. Then Settings → AI helper → **OpenAI** → paste → **Save and check**."],
+  ["Is my key safe?", "It's stored only on this device and sent only to Google or OpenAI. It's never synced and never included in backups. Don't share it; you can remove it in Settings at any time."],
+  ["No key? Use any AI chat", "Settings → New words via an AI chat: copy the instructions and send them to any free chat (ChatGPT, Gemini, Claude) with a photo or a list of words. Then paste the answer into Import."],
+ ]],
+ ["Other", [
+  ["Sounds", "Soft sounds play when you open the app, windows and tabs, add words and practise. Turn them off in Settings → Appearance → **Sounds**. On iPhone the silent switch mutes them too."],
+  ["Dark mode", "Settings → Appearance: like your device, light or dark."],
+  ["Does it work offline?", "Yes. Once the website has been opened, it works without internet. Sync and AI need internet; your changes are sent when you're back online."],
+  ["Something isn't working", "Reload the page or the app first. If words seem to be missing, check the Archive and Trash tabs. On the website, check Settings → Sync. And keep a backup file, so nothing can ever be lost."],
+  ["Who made this?", "aykus. Made with ♥."],
+ ]],
+],
+uk: [
+ ["Початок", [
+  ["Що це за застосунок?", "Твій власний словник для вивчення чеської або англійської. У кожного слова можуть бути переклади, множина, колір роду, синоніми, пояснення, нотатка й приклади речень. Слова зібрані за темами, а вчити їх можна на картках."],
+  ["Сайт чи версія в Claude: у чому різниця?", "- **Сайт**: безкоштовний і працює в будь-якому браузері. Слова зберігаються на твоєму пристрої. Для синхронізації між пристроями підключи свій Google Диск. Для допомоги ШІ додай свій ключ: у Gemini є безкоштовний рівень, OpenAI платний.\n- **Версія в Claude**: відкривається всередині Claude. Синхронізація й ШІ вже вбудовані й працюють на твоєму акаунті Claude. Спершу хтось має поділитися нею з тобою.\n\nОбидві працюють однаково, і слова можна переносити між ними (див. «Синхронізація і резервна копія»)."],
+  ["Як додати застосунок на головний екран?", "- **iPhone / iPad**: відкрий сайт у Safari, натисни «Поділитися» (квадрат зі стрілкою) → **На початковий екран** → **Додати**.\n- **Android**: відкрий сайт у Chrome, натисни ⋮ → **Додати на головний екран** або **Установити застосунок**.\n- **Комп'ютер**: у Chrome чи Edge натисни значок встановлення праворуч в адресному рядку (або ⋮ → **Установити**).\n\nНа iPhone так слова ще й надійніше збережені: Safari може стерти дані сайтів, які давно не відкривали, але не застосунків на головному екрані."],
+  ["Як змінити мови?", "Налаштування → Мови. Інтерфейс може бути українською, англійською, чеською або російською — пояснення, нотатки й переклади прикладів підлаштовуються під нього. Для кожного словника обери головний переклад і, за бажанням, додатковий — він показується дрібніше."],
+ ]],
+ ["Слова", [
+  ["Як додати слово?", "Натисни **+ Слово**, напиши слово й хоча б один переклад, обери тему й збережи. Кнопка ✨ допише решту сама."],
+  ["Що заповнює кнопка ✨?", "З ШІ (версія в Claude або твій власний ключ ШІ на сайті) — усе: переклади, транскрипцію, множину, рід, синоніми, пояснення, нотатку, якщо вона корисна, приклади речень і тему. Слово можна написати будь-якою своєю мовою, навіть не в тому полі, — воно знайде правильне.\n\nБез ШІ сайт бере дані з безкоштовних онлайн-словників, тож буде лише переклад і вимова."],
+  ["Як додати слова з фото?", "Натисни **Фото**, додай до 10 фото зошита чи підручника (або напиши список) і запусти. ШІ прочитає кожне фото, заповнить кожне слово й розкладе слова за темами. Слова, у яких він не впевнений, будуть першими — з позначеним місцем на фото: обери правильне слово, напиши своє або пропусти. Познач потрібні слова й натисни «Додати».\n\nНемає ключа ШІ на сайті? Скопіюй інструкцію, надішли її разом із фото в будь-який чат ШІ (ChatGPT, Gemini, Claude) і встав відповідь назад."],
+  ["Що означають кольори й позначки?", "- Синій — чоловічий рід, червоний — жіночий, зелений — середній. Світліший відтінок — множина.\n- **мн.** / **pl.** форма множини · **≈** синоніми · **!** нотатка, яку варто знати\n- **[…]** як читати чеське слово (**:** — довгий звук) · **/…/** англійська вимова\n\nТоркнись слова, щоб побачити все про нього."],
+  ["Як редагувати, переносити чи видаляти слова?", "Натисни ⋯ біля слова: редагувати, перенести в іншу тему, в архів або видалити. Щоб зробити це з багатьма словами одразу, натисни **Вибрати**, познач слова й обери дію.\n- **Архів** — для слів, які ти вже знаєш: їх немає в списку й практиці, але вони збережені.\n- **Кошик** тримає видалені слова, доки не видалиш їх назавжди, тож їх завжди можна повернути."],
+  ["Теми, пошук і приховування", "Торкнись назви теми, щоб згорнути її, або чипів угорі, щоб перейти до теми. Пошук знаходить слова будь-якою мовою. **Сховати переклад** і **Сховати слово** перетворюють список на швидку самоперевірку."],
+ ]],
+ ["Практика", [
+  ["Як працює практика?", "Натисни **Практика** (або «Практика» біля теми), обери, що вчити і як: слово → переклад, переклад → слово, мікс, пояснення → слово або додаткова мова. Торкнись картки, щоб перевернути. Тягни вправо (✓), якщо знаєш, вліво (✕) — щоб повторити. Пропущені слова повертаються, доки не вивчиш, а в кінці видно, над якими попрацювати.\n\nНа комп'ютері: пробіл — перевернути, → — знаю, ← — ще раз."],
+ ]],
+ ["Синхронізація і резервна копія", [
+  ["Як працює синхронізація?", "**Версія в Claude**: увійди в Claude з тим самим акаунтом на телефоні й комп'ютері та відкрий те саме посилання. Кожна зміна зберігається одразу й з'являється на іншому пристрої.\n\n**Сайт**: Налаштування → Синхронізація → **Підключити Google Диск** і обери свій акаунт Google. Слова зберігаються в прихованій папці застосунку на твоєму власному Google Диску. На іншому пристрої підключи той самий акаунт. Google тримає сайт увійденим приблизно годину, тож потім угорі з'явиться **Синхронізувати** — один дотик, і все оновлено.\n\nЗміни з обох пристроїв об'єднуються слово за словом, тож нічого не губиться."],
+  ["Мій словник приватний?", "Так. На сайті слова лишаються на твоєму пристрої — і на твоєму Google Диску, якщо підключиш. У версії в Claude у кожної людини свій словник, який ніхто інший не бачить, навіть той, хто поділився сторінкою."],
+  ["Чи можу я втратити слова, якщо закрию застосунок або він оновиться?", "Ні. Кожна зміна зберігається одразу. Оновлення ніколи не видаляють слова, а перед оновленням сайт зберігає запасну копію. Для надійності час від часу роби резервну копію: Налаштування → Резервна копія → **Завантажити файл**."],
+  ["Як перенести слова на інший пристрій або між сайтом і версією в Claude?", "На першому: Налаштування → **Скопіювати мої слова** (або Резервна копія → Завантажити файл). На іншому: Налаштування → Імпорт → встав текст або обери файл → **Додати до моїх слів**. Нічого не перезаписується: нові слова додаються, а відсутні деталі доповнюються."],
+  ["Як працюють оновлення?", "Угорі сайту з'являється **Вийшла версія X** — натисни **Оновити**. Слова лишаються. Версія в Claude оновлюється сама. Номер версії — внизу застосунку й у Налаштуваннях."],
+ ]],
+ ["ШІ", [
+  ["Мені потрібен ШІ?", "Ні. Усе працює й без нього. ШІ лише економить час: заповнює слова за тебе й читає фото."],
+  ["Хто платить за ШІ?", "Кожен користується своїм. У версії в Claude — акаунт Claude того, хто нею користується. На сайті — твій власний ключ: у Gemini є безкоштовний рівень, OpenAI оплачується за використання. Чужі гроші чи ліміти не витрачаються."],
+  ["Як отримати безкоштовний ключ Gemini?", "- Відкрий [Google AI Studio](https://aistudio.google.com/apikey) і увійди через Google.\n- Натисни **Create API key** і скопіюй ключ.\n- У застосунку: Налаштування → Помічник ШІ → **Gemini** → встав ключ → **Зберегти й перевірити**.\n\nНа безкоштовному рівні Google може використовувати надіслане для покращення своїх продуктів, тож не надсилай нічого приватного. Безкоштовне використання має денні ліміти: якщо досягнеш, спробуй пізніше."],
+  ["Чи можна з ChatGPT / OpenAI?", "Так, з ключем API з [platform.openai.com](https://platform.openai.com/api-keys). API оплачується окремо від підписки ChatGPT, тож на цьому акаунті потрібні кошти. Потім Налаштування → Помічник ШІ → **OpenAI** → встав → **Зберегти й перевірити**."],
+  ["Мій ключ у безпеці?", "Він зберігається лише на цьому пристрої й надсилається тільки в Google або OpenAI. Він ніколи не синхронізується й не потрапляє в резервні копії. Нікому його не давай; прибрати можна в Налаштуваннях будь-коли."],
+  ["Немає ключа? Будь-який чат ШІ", "Налаштування → Нові слова через чат ШІ: скопіюй інструкцію й надішли в будь-який безкоштовний чат (ChatGPT, Gemini, Claude) разом із фото чи списком слів. Потім встав відповідь в Імпорт."],
+ ]],
+ ["Інше", [
+  ["Звуки", "М'які звуки грають, коли відкриваєш застосунок, вікна й вкладки, додаєш слова й практикуєшся. Вимкнути: Налаштування → Оформлення → **Звуки**. На iPhone їх також вимикає перемикач беззвучного режиму."],
+  ["Темна тема", "Налаштування → Оформлення: як на пристрої, світла або темна."],
+  ["Чи працює без інтернету?", "Так. Після першого відкриття сайт працює без інтернету. Синхронізації й ШІ потрібен інтернет; зміни надішлються, коли зв'язок повернеться."],
+  ["Щось не працює", "Спершу перезавантаж сторінку або застосунок. Якщо слова ніби зникли, перевір вкладки «Архів» і «Кошик». На сайті перевір Налаштування → Синхронізація. І тримай файл резервної копії — тоді нічого не загубиться."],
+  ["Хто це зробив?", "aykus. Зроблено з ♥."],
+ ]],
+],
+cs: [
+ ["Začínáme", [
+  ["Co je to za aplikaci?", "Tvůj vlastní slovník pro učení češtiny nebo angličtiny. Každé slovo může mít překlady, množné číslo, barvu podle rodu, synonyma, vysvětlení, poznámku a příklady vět. Slova jsou rozdělená do témat a procvičuješ je na kartičkách."],
+  ["Web, nebo verze v Claude: jaký je rozdíl?", "- **Web**: zdarma a funguje v každém prohlížeči. Slova se ukládají v tvém zařízení. Pro synchronizaci mezi zařízeními připoj svůj Google Disk. Pro pomoc AI přidej vlastní klíč: Gemini má bezplatnou úroveň, OpenAI je placené.\n- **Verze v Claude**: otevírá se uvnitř Claude. Synchronizace i AI jsou vestavěné a běží na tvém účtu Claude. Nejdřív ti ji musí někdo nasdílet.\n\nObě fungují stejně a slova mezi nimi můžeš přenášet (viz „Synchronizace a záloha“)."],
+  ["Jak dát aplikaci na plochu?", "- **iPhone / iPad**: otevři web v Safari, klepni na Sdílet (čtverec se šipkou) → **Přidat na plochu** → **Přidat**.\n- **Android**: otevři web v Chromu, klepni na ⋮ → **Přidat na plochu** nebo **Nainstalovat aplikaci**.\n- **Počítač**: v Chromu nebo Edge klikni na ikonu instalace vpravo v adresním řádku (nebo ⋮ → **Nainstalovat**).\n\nNa iPhonu jsou tak slova i lépe chráněná: Safari může smazat data webů, které jsi dlouho neotevřel, ale ne aplikací na ploše."],
+  ["Jak změnit jazyky?", "Nastavení → Jazyky. Rozhraní může být ukrajinsky, anglicky, česky nebo rusky a vysvětlení, poznámky i překlady příkladů se mu přizpůsobí. Pro každý slovník si vyber hlavní překlad a případně doplňkový, zobrazený menším písmem."],
+ ]],
+ ["Slova", [
+  ["Jak přidat slovo?", "Klepni na **+ Slovo**, napiš slovo a aspoň jeden překlad, vyber téma a ulož. Tlačítko ✨ doplní zbytek za tebe."],
+  ["Co doplní tlačítko ✨?", "S AI (verze v Claude nebo vlastní klíč AI na webu) úplně vše: překlady, výslovnost, množné číslo, rod, synonyma, vysvětlení, poznámku, když se hodí, příklady vět i téma. Slovo můžeš napsat v kterémkoli svém jazyce, i do špatného pole, a najde správné slovo.\n\nBez AI web používá bezplatné online slovníky, takže doplní jen překlady a výslovnost."],
+  ["Jak přidat slova z fotky?", "Klepni na **Fotka**, přidej až 10 fotek sešitu nebo učebnice (nebo napiš seznam) a spusť. AI přečte každou fotku, doplní každé slovo a rozdělí slova do témat. Slova, kterými si není jistá, jsou první, s označeným místem na fotce: vyber správné slovo, napiš vlastní, nebo ho přeskoč. Zaškrtni slova, která chceš, a klepni na Přidat.\n\nNemáš na webu klíč AI? Zkopíruj návod, pošli ho s fotkou do libovolného chatu s AI (ChatGPT, Gemini, Claude) a odpověď vlož zpět."],
+  ["Co znamenají barvy a značky?", "- Modrá: mužský rod, červená: ženský, zelená: střední. Světlejší odstín označuje množné číslo.\n- **pl.** tvar množného čísla · **≈** synonyma · **!** poznámka, kterou se vyplatí znát\n- **[…]** jak číst české slovo (**:** je dlouhá hláska) · **/…/** anglická výslovnost\n\nKlepni na slovo a uvidíš o něm všechno."],
+  ["Jak slova upravit, přesunout nebo smazat?", "Klepni na ⋯ u slova: upravit, přesunout do jiného tématu, do archivu nebo smazat. Pro víc slov najednou klepni na **Vybrat**, zaškrtni slova a vyber akci.\n- **Archiv** je pro slova, která už umíš: zmizí ze seznamu i procvičování, ale zůstanou uložená.\n- **Koš** drží smazaná slova, dokud je nesmažeš navždy, takže je můžeš vždy obnovit."],
+  ["Témata, hledání a skrývání", "Klepnutím na název tématu ho sbalíš, štítky nahoře tě k tématu přenesou. Hledání najde slova v jakémkoli jazyce. **Skrýt překlad** a **Skrýt slovo** udělají ze seznamu rychlý test."],
+ ]],
+ ["Procvičování", [
+  ["Jak funguje procvičování?", "Klepni na **Procvičování** (nebo Procvičování u tématu), vyber, co a jak procvičovat: slovo → překlad, překlad → slovo, mix, vysvětlení → slovo nebo doplňkový jazyk. Klepnutím kartu otočíš. Táhni doprava (✓), když to umíš, doleva (✕), když to chceš znovu. Nezvládnutá slova se vracejí, dokud je neumíš, a na konci uvidíš, na čem zapracovat.\n\nNa počítači: mezerník otočí kartu, → umím, ← znovu."],
+ ]],
+ ["Synchronizace a záloha", [
+  ["Jak funguje synchronizace?", "**Verze v Claude**: přihlas se do Claude stejným účtem na telefonu i počítači a otevři stejný odkaz. Každá změna se hned uloží a objeví se na druhém zařízení.\n\n**Web**: Nastavení → Synchronizace → **Připojit Google Disk** a vyber svůj účet Google. Slova se ukládají do skryté složky aplikace na tvém vlastním Google Disku. Na druhém zařízení připoj stejný účet. Google nechá web přihlášený asi hodinu, potom se nahoře objeví **Synchronizovat**: jedno klepnutí a máš vše aktuální.\n\nZměny z obou zařízení se spojují slovo po slově, takže se nic neztratí."],
+  ["Je můj slovník soukromý?", "Ano. Na webu zůstávají slova v tvém zařízení, a pokud ho připojíš, i na tvém Google Disku. Ve verzi v Claude má každý vlastní slovník, který nikdo jiný nevidí, ani ten, kdo stránku nasdílel."],
+  ["Můžu přijít o slova, když aplikaci zavřu nebo se aktualizuje?", "Ne. Každá změna se ukládá okamžitě. Aktualizace slova nikdy nemažou a web si před aktualizací uloží záložní kopii. Pro jistotu si občas udělej zálohu: Nastavení → Záloha → **Stáhnout soubor**."],
+  ["Jak přenést slova na jiné zařízení nebo mezi webem a verzí v Claude?", "Na prvním: Nastavení → **Zkopírovat moje slova** (nebo Záloha → Stáhnout soubor). Na druhém: Nastavení → Import → vlož text nebo vyber soubor → **Přidat k mým slovům**. Nic se nepřepíše: nová slova se přidají a chybějící údaje doplní."],
+  ["Jak fungují aktualizace?", "Nahoře na webu se objeví **Vyšla verze X**: klepni na **Aktualizovat**. Slova zůstanou. Verze v Claude se aktualizuje sama. Číslo verze je dole v aplikaci a v Nastavení."],
+ ]],
+ ["AI", [
+  ["Potřebuju AI?", "Ne. Všechno funguje i bez ní. AI jen šetří čas: doplňuje slova za tebe a čte fotky."],
+  ["Kdo platí za AI?", "Každý používá svou. Ve verzi v Claude běží na účtu Claude toho, kdo ji používá. Na webu používá tvůj vlastní klíč: Gemini má bezplatnou úroveň, OpenAI se platí podle použití. Nikoho jiného peníze ani limity se nepoužívají."],
+  ["Jak získat bezplatný klíč Gemini?", "- Otevři [Google AI Studio](https://aistudio.google.com/apikey) a přihlas se přes Google.\n- Klepni na **Create API key** a klíč zkopíruj.\n- V aplikaci: Nastavení → Pomocník AI → **Gemini** → vlož klíč → **Uložit a ověřit**.\n\nV bezplatné úrovni může Google odeslané použít ke zlepšení svých produktů, takže neposílej nic soukromého. Bezplatné použití má denní limity; když ho dosáhneš, zkus to později."],
+  ["Jde to s ChatGPT / OpenAI?", "Ano, s klíčem API z [platform.openai.com](https://platform.openai.com/api-keys). API se platí zvlášť od předplatného ChatGPT, takže účet potřebuje kredit. Pak Nastavení → Pomocník AI → **OpenAI** → vlož → **Uložit a ověřit**."],
+  ["Je můj klíč v bezpečí?", "Ukládá se jen v tomto zařízení a posílá se jen Googlu nebo OpenAI. Nikdy se nesynchronizuje ani nepatří do záloh. Nikomu ho nedávej; v Nastavení ho můžeš kdykoli odebrat."],
+  ["Nemáš klíč? Jakýkoli chat s AI", "Nastavení → Nová slova přes chat s AI: zkopíruj návod a pošli ho do libovolného bezplatného chatu (ChatGPT, Gemini, Claude) s fotkou nebo seznamem slov. Odpověď pak vlož do Importu."],
+ ]],
+ ["Ostatní", [
+  ["Zvuky", "Jemné zvuky hrají, když otevřeš aplikaci, okna a karty, přidáš slova a procvičuješ. Vypnout: Nastavení → Vzhled → **Zvuky**. Na iPhonu je ztlumí i přepínač tichého režimu."],
+  ["Tmavý režim", "Nastavení → Vzhled: podle zařízení, světlý nebo tmavý."],
+  ["Funguje to bez internetu?", "Ano. Jakmile web jednou otevřeš, funguje i bez internetu. Synchronizace a AI internet potřebují; změny se odešlou, až budeš znovu online."],
+  ["Něco nefunguje", "Nejdřív obnov stránku nebo aplikaci. Když slova chybí, podívej se do karet Archiv a Koš. Na webu zkontroluj Nastavení → Synchronizace. A měj soubor se zálohou, pak se nic neztratí."],
+  ["Kdo to udělal?", "aykus. Vytvořeno s ♥."],
+ ]],
+],
+ru: [
+ ["Начало", [
+  ["Что это за приложение?", "Твой собственный словарь для изучения чешского или английского. У каждого слова могут быть переводы, множественное число, цвет рода, синонимы, объяснение, заметка и примеры предложений. Слова разложены по темам, а учить их можно на карточках."],
+  ["Сайт или версия в Claude: в чём разница?", "- **Сайт**: бесплатный и работает в любом браузере. Слова хранятся на твоём устройстве. Для синхронизации между устройствами подключи свой Google Диск. Для помощи ИИ добавь свой ключ: у Gemini есть бесплатный уровень, OpenAI платный.\n- **Версия в Claude**: открывается внутри Claude. Синхронизация и ИИ уже встроены и работают на твоём аккаунте Claude. Сначала кто-то должен поделиться ею с тобой.\n\nОбе работают одинаково, и слова можно переносить между ними (см. «Синхронизация и резервная копия»)."],
+  ["Как добавить приложение на главный экран?", "- **iPhone / iPad**: открой сайт в Safari, нажми «Поделиться» (квадрат со стрелкой) → **На экран «Домой»** → **Добавить**.\n- **Android**: открой сайт в Chrome, нажми ⋮ → **Добавить на главный экран** или **Установить приложение**.\n- **Компьютер**: в Chrome или Edge нажми значок установки справа в адресной строке (или ⋮ → **Установить**).\n\nНа iPhone так слова ещё и надёжнее сохранены: Safari может стереть данные сайтов, которые давно не открывали, но не приложений на главном экране."],
+  ["Как поменять языки?", "Настройки → Языки. Интерфейс может быть на украинском, английском, чешском или русском — объяснения, заметки и переводы примеров подстраиваются под него. Для каждого словаря выбери основной перевод и, если хочешь, дополнительный — он показывается мельче."],
+ ]],
+ ["Слова", [
+  ["Как добавить слово?", "Нажми **+ Слово**, напиши слово и хотя бы один перевод, выбери тему и сохрани. Кнопка ✨ допишет остальное сама."],
+  ["Что заполняет кнопка ✨?", "С ИИ (версия в Claude или твой собственный ключ ИИ на сайте) — всё: переводы, транскрипцию, множественное число, род, синонимы, объяснение, заметку, если она полезна, примеры предложений и тему. Слово можно написать на любом своём языке, даже не в том поле, — оно найдёт правильное.\n\nБез ИИ сайт берёт данные из бесплатных онлайн-словарей, поэтому будут только переводы и произношение."],
+  ["Как добавить слова с фото?", "Нажми **Фото**, добавь до 10 фото тетради или учебника (или напиши список) и запусти. ИИ прочитает каждое фото, заполнит каждое слово и разложит слова по темам. Слова, в которых он не уверен, будут первыми — с отмеченным местом на фото: выбери правильное слово, напиши своё или пропусти. Отметь нужные слова и нажми «Добавить».\n\nНет ключа ИИ на сайте? Скопируй инструкцию, отправь её вместе с фото в любой чат с ИИ (ChatGPT, Gemini, Claude) и вставь ответ обратно."],
+  ["Что значат цвета и значки?", "- Синий — мужской род, красный — женский, зелёный — средний. Более светлый оттенок — множественное число.\n- **pl.** форма множественного числа · **≈** синонимы · **!** заметка, которую стоит знать\n- **[…]** как читать чешское слово (**:** — долгий звук) · **/…/** английское произношение\n\nНажми на слово, чтобы увидеть всё о нём."],
+  ["Как редактировать, переносить или удалять слова?", "Нажми ⋯ рядом со словом: редактировать, перенести в другую тему, в архив или удалить. Чтобы сделать это с многими словами сразу, нажми **Выбрать**, отметь слова и выбери действие.\n- **Архив** — для слов, которые ты уже знаешь: их нет в списке и практике, но они сохранены.\n- **Корзина** хранит удалённые слова, пока не удалишь их навсегда, так что их всегда можно вернуть."],
+  ["Темы, поиск и скрытие", "Нажми на название темы, чтобы свернуть её, или на чипы вверху, чтобы перейти к теме. Поиск находит слова на любом языке. **Скрыть перевод** и **Скрыть слово** превращают список в быструю самопроверку."],
+ ]],
+ ["Практика", [
+  ["Как работает практика?", "Нажми **Практика** (или «Практика» рядом с темой), выбери, что учить и как: слово → перевод, перевод → слово, микс, объяснение → слово или дополнительный язык. Нажми на карточку, чтобы перевернуть. Тяни вправо (✓), если знаешь, влево (✕) — чтобы повторить. Пропущенные слова возвращаются, пока не выучишь, а в конце видно, над какими поработать.\n\nНа компьютере: пробел — перевернуть, → — знаю, ← — ещё раз."],
+ ]],
+ ["Синхронизация и резервная копия", [
+  ["Как работает синхронизация?", "**Версия в Claude**: войди в Claude с тем же аккаунтом на телефоне и компьютере и открой ту же ссылку. Каждое изменение сохраняется сразу и появляется на другом устройстве.\n\n**Сайт**: Настройки → Синхронизация → **Подключить Google Диск** и выбери свой аккаунт Google. Слова хранятся в скрытой папке приложения на твоём собственном Google Диске. На другом устройстве подключи тот же аккаунт. Google держит сайт авторизованным примерно час, поэтому потом вверху появится **Синхронизировать** — одно касание, и всё обновлено.\n\nИзменения с обоих устройств объединяются слово за словом, поэтому ничего не теряется."],
+  ["Мой словарь приватный?", "Да. На сайте слова остаются на твоём устройстве — и на твоём Google Диске, если подключишь. В версии в Claude у каждого человека свой словарь, который никто другой не видит, даже тот, кто поделился страницей."],
+  ["Могу ли я потерять слова, если закрою приложение или оно обновится?", "Нет. Каждое изменение сохраняется сразу. Обновления никогда не удаляют слова, а перед обновлением сайт сохраняет запасную копию. Для надёжности иногда делай резервную копию: Настройки → Резервная копия → **Скачать файл**."],
+  ["Как перенести слова на другое устройство или между сайтом и версией в Claude?", "На первом: Настройки → **Скопировать мои слова** (или Резервная копия → Скачать файл). На другом: Настройки → Импорт → вставь текст или выбери файл → **Добавить к моим словам**. Ничего не перезаписывается: новые слова добавляются, а недостающие детали дополняются."],
+  ["Как работают обновления?", "Вверху сайта появляется **Вышла версия X** — нажми **Обновить**. Слова остаются. Версия в Claude обновляется сама. Номер версии — внизу приложения и в Настройках."],
+ ]],
+ ["ИИ", [
+  ["Мне нужен ИИ?", "Нет. Всё работает и без него. ИИ только экономит время: заполняет слова за тебя и читает фото."],
+  ["Кто платит за ИИ?", "Каждый пользуется своим. В версии в Claude — аккаунт Claude того, кто ею пользуется. На сайте — твой собственный ключ: у Gemini есть бесплатный уровень, OpenAI оплачивается за использование. Чужие деньги или лимиты не тратятся."],
+  ["Как получить бесплатный ключ Gemini?", "- Открой [Google AI Studio](https://aistudio.google.com/apikey) и войди через Google.\n- Нажми **Create API key** и скопируй ключ.\n- В приложении: Настройки → Помощник ИИ → **Gemini** → вставь ключ → **Сохранить и проверить**.\n\nНа бесплатном уровне Google может использовать отправленное для улучшения своих продуктов, поэтому не отправляй ничего личного. У бесплатного использования есть дневные лимиты: если достигнешь, попробуй позже."],
+  ["Можно ли с ChatGPT / OpenAI?", "Да, с ключом API с [platform.openai.com](https://platform.openai.com/api-keys). API оплачивается отдельно от подписки ChatGPT, поэтому на этом аккаунте нужны средства. Потом Настройки → Помощник ИИ → **OpenAI** → вставь → **Сохранить и проверить**."],
+  ["Мой ключ в безопасности?", "Он хранится только на этом устройстве и отправляется только в Google или OpenAI. Он никогда не синхронизируется и не попадает в резервные копии. Никому его не давай; убрать можно в Настройках в любой момент."],
+  ["Нет ключа? Любой чат с ИИ", "Настройки → Новые слова через чат с ИИ: скопируй инструкцию и отправь в любой бесплатный чат (ChatGPT, Gemini, Claude) вместе с фото или списком слов. Потом вставь ответ в Импорт."],
+ ]],
+ ["Другое", [
+  ["Звуки", "Мягкие звуки играют, когда открываешь приложение, окна и вкладки, добавляешь слова и практикуешься. Выключить: Настройки → Оформление → **Звуки**. На iPhone их также выключает переключатель беззвучного режима."],
+  ["Тёмная тема", "Настройки → Оформление: как на устройстве, светлая или тёмная."],
+  ["Работает ли без интернета?", "Да. После первого открытия сайт работает без интернета. Синхронизации и ИИ нужен интернет; изменения отправятся, когда связь вернётся."],
+  ["Что-то не работает", "Сначала перезагрузи страницу или приложение. Если слова будто пропали, проверь вкладки «Архив» и «Корзина». На сайте проверь Настройки → Синхронизация. И держи файл резервной копии — тогда ничего не потеряется."],
+  ["Кто это сделал?", "aykus. Сделано с ♥."],
+ ]],
+],
+};
+
 </script>
 <script>
 "use strict";
-const APP_VERSION = "0.5";
+const APP_VERSION = "0.7";
 const NICK = "aykus";
 const BUILD = window.VOKAB_BUILD || "web";
 
@@ -1097,10 +1487,13 @@ const BUILD = window.VOKAB_BUILD || "web";
 const LANGS = ["uk", "en", "cs", "ru"];
 const LOCALES = { uk: "uk-UA", en: "en-GB", cs: "cs-CZ", ru: "ru-RU" };
 let LANG = "uk";
+let AI_NAME = "Claude";                                        // on the website: the person's own AI (Gemini / GPT)
+const AI_KEYS = new Set(["ph_hint", "ph_reading", "ph_err_grant", "ph_err_rate", "af_claude", "af_claude_hint", "rv_check_p", "rv_refilling"]);
 function t(k, ...a) {
   const row = I18N[k];
   if (!row) { console.error("i18n missing: " + k); return k; }
   let s = row[LANGS.indexOf(LANG)] ?? row[0];
+  if (AI_NAME !== "Claude" && AI_KEYS.has(k)) s = s.replace(/Claude/g, AI_NAME);
   a.forEach((v, i) => { s = s.split("{" + i + "}").join(v); });
   return s;
 }
@@ -1185,6 +1578,7 @@ function normWord(w, dk, gid) {
   if (w.def && !o.expl[T]) o.expl[T] = str(w.def);
   for (const k of ["pl", "q", "archived", "deleted"]) if (w[k]) o[k] = true;
   if (w.deleted && w.deletedAt) o.deletedAt = +w.deletedAt || Date.now();
+  if (+w.u) o.u = +w.u;
   return o;
 }
 function normTopic(g, i, dk) {
@@ -1194,13 +1588,16 @@ function normTopic(g, i, dk) {
     if (g.name) name.uk = String(g.name); else if (g.ua) name.uk = String(g.ua);
     const sub = g.sub || g.cz; if (sub) name[dk === "en" ? "en" : "cs"] = String(sub);
   }
-  return { id: String(g.id || newId("t")), name: ml(name), order: Number.isFinite(+g.order) && g.order !== null && g.order !== undefined ? +g.order : (i + 1) * 10 };
+  const o = { id: String(g.id || newId("t")), name: ml(name), order: Number.isFinite(+g.order) && g.order !== null && g.order !== undefined ? +g.order : (i + 1) * 10 };
+  if (+g.u) o.u = +g.u;
+  return o;
 }
 function normSheet(s, i) {
   const o = { id: String(s.id || newId("s")), order: Number.isFinite(+s.order) && s.order !== null && s.order !== undefined ? +s.order : (i + 1) * 10,
     title: typeof s.title === "string" ? { uk: s.title } : ml(s.title),
     blocks: Array.isArray(s.blocks) ? { uk: s.blocks } : (s.blocks && typeof s.blocks === "object" ? s.blocks : {}) };
   if (s.deleted) o.deleted = true;
+  if (+s.u) o.u = +s.u;
   return o;
 }
 const OTHER = { uk: "Інше", en: "Other", cs: "Ostatní", ru: "Другое" };
@@ -1233,23 +1630,30 @@ function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (_
 const dev = (() => { try { return JSON.parse(lsGet(DEVKEY) || "{}") || {}; } catch (_) { return {}; } })();
 const saveDev = () => lsSet(DEVKEY, JSON.stringify(dev));
 function fromJSON(s) {
-  return { v: 2, dicts: { cs: normDict(s.dicts?.cs, "cs"), en: normDict(s.dicts?.en, "en") }, prefs: normPrefs(s.prefs), lastBackup: s.lastBackup || null, needsContent: !!s.needsContent };
+  return { v: 2, dicts: { cs: normDict(s.dicts?.cs, "cs"), en: normDict(s.dicts?.en, "en") }, prefs: normPrefs(s.prefs), lastBackup: s.lastBackup || null, gone: (s.gone && typeof s.gone === "object") ? s.gone : {}, prefsU: +s.prefsU || 0 };
 }
 function loadLocal() {
   const raw = lsGet(KEY);
   if (raw) { try { return fromJSON(JSON.parse(raw)); } catch (_) {} }
   const raw1 = lsGet(KEY1);
-  if (raw1) { try { const st = fromJSON(JSON.parse(raw1)); st.needsContent = st.dicts.cs.words.length > 0; st.prefs.onboarded = false; return st; } catch (_) {} }
+  if (raw1) { try { const st = fromJSON(JSON.parse(raw1)); st.prefs.onboarded = false; return st; } catch (_) {} }
   return emptyStore();
 }
 let store = emptyStore();
 let booted = false;
 function persistLocal() { const ok = lsSet(KEY, JSON.stringify(store)); if (!ok && !cloud) showToast(t("t_save_fail")); }
-function save() { persistLocal(); if (cloud) cloudSave(); }
+function save() {
+  if (BUILD === "web") stampChanges();
+  persistLocal();
+  if (cloud) cloudSave();
+  if (BUILD === "web") driveAfterSave();
+}
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
 
-/* ================= cloud sync (Claude version) ================= */
-let cloud = null;
+/* ================= cloud sync (Claude version): every signed-in person has their own private dictionary ================= */
+let cloud = null;                      // db while this person's dictionary syncs
+let CP = "";                           // this person's private subtree: data/users/<id>/app/
+let syncMode = "local";                // "cloud" | "local" (website) | "noid" (Claude, nobody signed in) | "view" (Claude, may not save here)
 const synced = new Map();              // "collection/id" -> canonical JSON last seen on the server or written by us
 const COLLS = ["w_cs", "t_cs", "s_cs", "w_en", "t_en", "s_en"];
 const reconciled = new Set();
@@ -1287,11 +1691,12 @@ function applyRemote(coll, snap) {
     if (ch.type === "removed") { if (synced.has(sk)) { synced.delete(sk); if (i >= 0) { list.splice(i, 1); changed = true; } } continue; }
     const obj = normFor(kind, { ...(ch.doc.data() || {}), id }, dk), c = canon(withoutId(obj));
     if (synced.get(sk) === c) continue;
+    if (pending.has(sk)) continue;                         // our own newer change is still on its way up
     synced.set(sk, c);
     if (i >= 0) list[i] = obj; else list.push(obj);
     changed = true;
   }
-  if (changed) { if (kind === "w" && reconciled.has("t_" + dk)) ensureTopics(d); scheduleRender(); }
+  if (changed) { if (kind === "w" && reconciled.has("t_" + dk)) ensureTopics(d); if (booted) persistLocal(); scheduleRender(); }
 }
 function reconcile(coll, snap) {
   if (reconciled.has(coll) || snap.metadata.fromCache) return;
@@ -1302,8 +1707,11 @@ function reconcile(coll, snap) {
   if (d[key].length !== before) scheduleRender();
   if (reconciled.size >= COLLS.length && deferredFlush) { deferredFlush = false; flushCloud(); }
 }
+let remotePrefs = false;
 function applyPrefsRemote(snap) {
   if (!snap.exists) return;
+  remotePrefs = true;
+  if (pending.has("meta/prefs")) return;
   const data = snap.data() || {};
   const p = normPrefs(data.prefs), lb = data.lastBackup || null;
   const c = canon(clean({ prefs: p, lastBackup: lb }));
@@ -1315,43 +1723,114 @@ function applyPrefsRemote(snap) {
   if (state.dict) { refreshChrome(); scheduleRender(); } else if ($("onboard").hidden) showChooser();
 }
 let flushTimer = null;
-function cloudSave() { clearTimeout(flushTimer); flushTimer = setTimeout(flushCloud, 250); }
+function cloudSave() { clearTimeout(flushTimer); flushTimer = setTimeout(flushCloud, 200); }
 function flushCloud() {
+  clearTimeout(flushTimer);
   if (!cloud) return;
   if (reconciled.size < COLLS.length) { deferredFlush = true; return; }
   const docs = cloudDocs();
   for (const [sk, doc] of docs) { const c = canon(doc); if (synced.get(sk) !== c) { synced.set(sk, c); enqueue(["set", sk, doc]); } }
   for (const sk of [...synced.keys()]) if (!docs.has(sk)) { synced.delete(sk); enqueue(["del", sk]); }
 }
-const wq = []; let running = 0, failShown = 0;
-function enqueue(op) { const i = wq.findIndex(x => x[1] === op[1]); if (i >= 0) wq.splice(i, 1); wq.push(op); pump(); }
-const runOp = ([kind, sk, doc]) => kind === "set" ? cloud.doc(sk).set(doc) : cloud.doc(sk).delete();
-function pump() {
-  while (running < 4 && wq.length) {
-    const op = wq.shift(); running++;
-    runOp(op)
-      .catch(async e => { if (e && (e.code === "unavailable" || e.code === "resource_exhausted")) { await sleep(700 + Math.random() * 900); return runOp(op); } throw e; })
-      .catch(e => { console.warn("cloud write failed", op[1], e && e.code); synced.delete(op[1]); if (Date.now() - failShown > 8000) { failShown = Date.now(); showToast(t("cloud_fail")); } })
-      .finally(() => { running--; pump(); });
+
+/* Changes not yet confirmed by the server are also kept on the device, so closing the app mid-save loses nothing:
+   the next start sends them again. */
+const pending = new Map();             // "collection/id" -> op
+const PKEY = () => "vokab:pending:" + CP;
+let pendingTimer = null, pendingMs = 0;
+function persistPending(mode) {                          // true: now; "lazy": within 1.5 s (after confirmed writes); otherwise next tick
+  if (!CP) return;
+  if (mode !== true) {
+    const ms = mode === "lazy" ? 1500 : 0;
+    if (pendingTimer && (ms > 0 || pendingMs === 0)) return;
+    clearTimeout(pendingTimer); pendingMs = ms; pendingTimer = setTimeout(() => persistPending(true), ms); return;
+  }
+  clearTimeout(pendingTimer); pendingTimer = null;
+  if (pending.size) lsSet(PKEY(), JSON.stringify([...pending.values()]));
+  else { try { localStorage.removeItem(PKEY()); } catch (_) {} }
+}
+function loadPending() { try { const a = JSON.parse(lsGet(PKEY()) || "[]"); return Array.isArray(a) ? a.filter(x => Array.isArray(x) && typeof x[1] === "string") : []; } catch (_) { return []; } }
+function applyPendingToStore(ops) {
+  for (const [op, sk, doc] of ops) {
+    if (sk === "meta/prefs") { if (op === "set" && doc) { store.prefs = normPrefs(doc.prefs); store.lastBackup = doc.lastBackup || null; } continue; }
+    const [coll, id] = sk.split("/"), [kind, dk] = coll.split("_"), d = store.dicts[dk];
+    if (!d || !id || !"wts".includes(kind)) continue;
+    const list = d[listKey(kind)], i = list.findIndex(x => x.id === id);
+    if (op === "del") { if (i >= 0) list.splice(i, 1); }
+    else if (doc) { const obj = normFor(kind, { ...doc, id }, dk); if (i >= 0) list[i] = obj; else list.push(obj); }
+  }
+  for (const k of ["cs", "en"]) ensureTopics(store.dicts[k]);
+}
+function enqueue(op) {
+  const i = wq.findIndex(x => x[1] === op[1]); if (i >= 0) wq.splice(i, 1);
+  wq.push(op); pending.set(op[1], op); persistPending(); pump(); refreshSyncLine();
+}
+const wq = []; let running = 0, failShown = 0, wroteOk = false;
+const RETRY = new Set(["unavailable", "resource_exhausted", "deadline_exceeded", "aborted", "internal", "unknown"]);
+const runOp = ([kind, sk, doc]) => kind === "set" ? cloud.doc(CP + sk).set(doc) : cloud.doc(CP + sk).delete();
+async function runWithRetry(op) {
+  for (let n = 0; ; n++) {
+    try { return await runOp(op); }
+    catch (e) {
+      const code = (e && e.code) || "unknown";
+      if (!RETRY.has(code) || n >= 5 || !cloud) throw e;
+      await sleep(Math.min(20000, 900 * 2 ** n) + Math.random() * 700);
+      if (pending.get(op[1]) !== op) return;               // a newer change to the same item replaced this one
+    }
   }
 }
+function pump() {
+  while (cloud && running < 3 && wq.length) {
+    const op = wq.shift(); running++;
+    runWithRetry(op)
+      .then(() => { wroteOk = true; if (pending.get(op[1]) === op) { pending.delete(op[1]); persistPending("lazy"); } })
+      .catch(e => {
+        const code = e && e.code;
+        console.warn("cloud write failed", op[1], code);
+        if (code === "invalid_argument" && !wroteOk) return goLocal();   // this account may not save here
+        if (code === "invalid_argument" || code === "quota_exceeded") { if (pending.get(op[1]) === op) { pending.delete(op[1]); persistPending(); } }
+        synced.delete(op[1]);                              // the next change sends it again; it also stays queued on the device
+        if (Date.now() - failShown > 8000) { failShown = Date.now(); showToast(t(code === "quota_exceeded" ? "cloud_full" : "cloud_fail")); }
+      })
+      .finally(() => { running--; pump(); refreshSyncLine(); });
+  }
+}
+let bootCached = null;                                     // this device's copy from before the cloud loaded
+function goLocal() {                                       // keep working, but save on this device only
+  if (!cloud) return;
+  cloud = null; syncMode = "view"; wq.length = 0; pending.clear(); persistPending(true); CP = "";
+  if (bootCached) { const st = { added: 0, updated: 0, groups: 0, sheets: 0 }; for (const k of ["cs", "en"]) mergeInto(k, bootCached.dicts[k], st); bootCached = null; }
+  persistLocal(); refreshSyncLine(); scheduleRender(); showToast(t("sync_off_here"));
+}
+function flushNow() { if (cloud) { flushCloud(); persistPending(true); } }
+addEventListener("pagehide", flushNow);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { flushNow(); if (BUILD === "web" && dev.drive?.dirty && tokenValid()) driveSync(false); }
+  else { checkUpdate(); if (BUILD === "web" && booted && tokenValid()) driveSync(false); }
+});
 function bootCloud(db) {
   cloud = db;
   return new Promise(resolve => {
-    const pending = new Set([...COLLS, "meta"]);
+    const pend = new Set([...COLLS, "meta"]);
     let done = false;
     const finish = offline => { if (done) return; done = true; clearTimeout(timer); resolve(offline); };
     const timer = setTimeout(() => finish(true), 10000);
-    const settle = name => { pending.delete(name); if (!pending.size) finish(false); };
+    const settle = name => { pend.delete(name); if (!pend.size) finish(false); };
     for (const coll of COLLS) {
-      cloud.collection(coll).onSnapshot(
+      cloud.collection(CP + coll).onSnapshot(
         snap => { applyRemote(coll, snap); reconcile(coll, snap); if (!snap.metadata.fromCache) settle(coll); },
         err => { console.warn(coll, err && err.code); reconciled.add(coll); settle(coll); });
     }
-    cloud.doc("meta/prefs").onSnapshot(
+    cloud.doc(CP + "meta/prefs").onSnapshot(
       s => { applyPrefsRemote(s); if (!s.metadata.fromCache) settle("meta"); },
       err => { console.warn("prefs", err && err.code); settle("meta"); });
   });
+}
+function refreshSyncLine(force) {
+  if (!force && !$("setdlg").open) return;
+  const n = pending.size;
+  $("syncline").classList.toggle("on", syncMode === "cloud");
+  $("synctext").textContent = t({ cloud: "sync_cloud", local: "sync_local", noid: "sync_noid", view: "sync_view" }[syncMode]) + (syncMode === "cloud" && n ? " " + t("sync_pending", n) : "");
 }
 
 /* ================= theme, language, plural ================= */
@@ -1374,6 +1853,7 @@ function pickLang() {
 function applyPlural() { $("s-plural").checked = store.prefs.plural !== false; }
 function setLang(l) {
   LANG = l; store.prefs.lang = l; save(); applyI18n();
+  if ($("helpdlg").open) $("helpbody").innerHTML = helpHTML($("help-q").value);
   if (state.dict) { refreshChrome(); render(); } else if (!$("chooser").hidden) showChooser();
 }
 
@@ -1432,8 +1912,9 @@ function refreshChrome() {
   $("selmode").textContent = state.selecting ? t("done") : t("select");
   document.title = `${t("app")} · ${lname(TL())}`;
 }
-function openDict(k) {
+function openDict(k, quiet) {
   if (!DICTS[k]) return showChooser();
+  if (booted && !quiet) sfx(state.dict ? "tap" : "enter");
   if (state.selecting) toggleSelect(false);
   state.dict = k; state.view = "active"; state.hide = 0; state.animate = true;
   document.body.dataset.dict = k;
@@ -1446,7 +1927,7 @@ function openDict(k) {
   refreshChrome(); render(); scrollTo({ top: 0 });
   if (!pref(k).main) { renderTrPicker($("tr-pick"), k, afterTrChange); openDlg($("trdlg")); }
 }
-$("chooser").addEventListener("click", e => { const b = e.target.closest("[data-dict]"); if (b) openDict(b.dataset.dict); });
+$("chooser").addEventListener("click", e => { const b = e.target.closest("[data-dict]"); if (b) openFromStart(b.dataset.dict, "chooser"); });
 $("home").addEventListener("click", showChooser);
 $("sw-cs").addEventListener("click", () => openDict("cs"));
 $("sw-en").addEventListener("click", () => openDict("en"));
@@ -1463,6 +1944,7 @@ function renderTrPicker(el, k, onChange) {
     <div class="seg" data-role="extra"><button type="button" data-v="" aria-pressed="${!extra}">${esc(t("none"))}</button>${TR_OPTS[k].filter(l => l !== main).map(l => `<button type="button" data-v="${l}" aria-pressed="${l === extra}">${esc(lname(l))}</button>`).join("")}</div>`;
   el.onclick = e => {
     const b = e.target.closest("[data-v]"); if (!b) return;
+    sfx("tap");
     const role = b.closest("[data-role]").dataset.role;
     if (role === "main") { p.main = b.dataset.v; if (p.extra === p.main) p.extra = ""; } else { p.extra = b.dataset.v; if (!p.main) p.main = main; }
     renderTrPicker(el, k, onChange);
@@ -1483,14 +1965,14 @@ function showOnboarding() {
   $("chooser").hidden = true; $("app").hidden = true; $("onboard").hidden = false;
   applyI18n(); obShow(0);
 }
-$("ob-langs").addEventListener("click", e => { const b = e.target.closest("[data-lang]"); if (!b) return; LANG = b.dataset.lang; store.prefs.lang = LANG; applyI18n(); });
+$("ob-langs").addEventListener("click", e => { const b = e.target.closest("[data-lang]"); if (!b) return; sfx("tap"); LANG = b.dataset.lang; store.prefs.lang = LANG; applyI18n(); });
 $("onboard").addEventListener("click", e => {
-  const nav = e.target.closest("[data-ob]"); if (nav) { obShow(+nav.dataset.ob); return; }
+  const nav = e.target.closest("[data-ob]"); if (nav) { sfx("tap"); obShow(+nav.dataset.ob); return; }
   const learn = e.target.closest("[data-learn]"); if (learn) { OB.learn = learn.dataset.learn; obShow(2); }
 });
 $("ob-go").addEventListener("click", () => {
   store.prefs.lang = LANG; store.prefs.onboarded = true; pref(OB.learn).main = MAIN(OB.learn);
-  save(); openDict(OB.learn);
+  save(); openFromStart(OB.learn, "onboard");
 });
 
 /* ================= render ================= */
@@ -1577,8 +2059,8 @@ function render() {
   if (q && !shownAny) empty = t("empty_q");
   else if (!shownAny) empty = { active: counts.archive ? t("empty_allarch") : t("empty_active"), archive: t("empty_archive"), trash: t("empty_trash") }[v];
   $("empty").hidden = !empty;
-  const canLoadSet = !cloud && BUILD === "web" && state.dict === "cs" && !d.words.length;
-  $("empty").innerHTML = esc(empty) + (v === "active" && !shownAny && !q ? `<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">${canLoadSet ? `<button class="btn primary" type="button" data-load-set>${esc(t("load_set"))}</button>` : ""}<button class="btn" type="button" data-open-photo>${ICON_CAM}${esc(t("photo"))}</button><button class="btn" type="button" data-open-settings>${esc(t("open_settings"))}</button></div>` : "");
+  const blank = !d.words.length;
+  $("empty").innerHTML = esc(empty) + (v === "active" && !shownAny && !q ? `<div class="empty-btns">${blank ? `<button class="btn primary" type="button" data-add-word>${esc(t("add_word"))}</button>` : ""}<button class="btn" type="button" data-open-photo>${ICON_CAM}${esc(t("photo"))}</button><button class="btn" type="button" data-open-help>${esc(t("help"))}</button></div>` : "");
   const nt = topicsSorted().filter(tp => (m.get(tp.id) || []).some(w => inView(w, "active"))).length;
   $("stats").textContent = t("stats", t("dict_" + state.dict), counts.active, nt, counts.archive);
   updateSelBar();
@@ -1586,7 +2068,8 @@ function render() {
 $("empty").addEventListener("click", e => {
   if (e.target.closest("[data-open-settings]")) openSettings();
   if (e.target.closest("[data-open-photo]")) openPhoto();
-  if (e.target.closest("[data-load-set]")) loadWordSet(true);
+  if (e.target.closest("[data-open-help]")) openHelp();
+  if (e.target.closest("[data-add-word]")) openForm(null);
 });
 $("nav").addEventListener("click", e => {
   const a = e.target.closest("[data-goto]"); if (!a) return; e.preventDefault();
@@ -1609,13 +2092,14 @@ function showToast(text, undo) {
   const el = $("toast");
   $("toast-text").textContent = text; toastUndo = undo || null; $("toast-undo").hidden = !undo;
   el.classList.remove("leaving"); toastShow(false); void el.offsetWidth; toastShow(true);
+  if (undo) sfx("swoosh");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { el.classList.add("leaving"); setTimeout(() => { toastShow(false); el.classList.remove("leaving"); toastUndo = null; }, 200); }, 6000);
 }
 $("toast-undo").addEventListener("click", () => { const u = toastUndo; toastShow(false); toastUndo = null; if (u) u(); });
 
 /* dialogs with open/close animation */
-function openDlg(d) { d.classList.remove("closing"); if (!d.open) d.showModal(); }
+function openDlg(d) { d.classList.remove("closing"); if (!d.open) { d.showModal(); sfx("open"); } }
 function closeDlg(d) {
   if (!d.open || d.classList.contains("closing")) return;
   if (reduced()) { d.close(); return; }
@@ -1658,6 +2142,7 @@ function openDetail(id) {
 const menu = $("menu"); let menuFor = null;
 function closeMenu() { menu.hidden = true; if (menuFor) menuFor.btn.setAttribute("aria-expanded", "false"); menuFor = null; }
 function openMenu(btn, item) {
+  sfx("tap");
   closeMenu();
   let items = [];
   if (item.dataset.s) items = [["restore-sheet", "m_restore_sheet"], ["purge-sheet", "m_purge", "danger"]];
@@ -1738,6 +2223,7 @@ $("sheets").addEventListener("click", e => {
 
 /* ================= toolbar ================= */
 function setView(v) {
+  if (v !== state.view) sfx("tap");
   state.view = v; state.animate = true; if (state.selecting) toggleSelect(false);
   ["active", "archive", "trash"].forEach(x => $("tab-" + x).setAttribute("aria-selected", String(x === v)));
   $("selmode").hidden = v === "trash"; render(); scrollTo({ top: 0 });
@@ -1837,7 +2323,7 @@ function parseExLines(text) {
 }
 $("wform").addEventListener("submit", e => {
   e.preventDefault();
-  const err = m => { $("f-err").textContent = m; $("f-err").hidden = false; };
+  const err = m => { $("f-err").textContent = m; $("f-err").hidden = false; sfx("error"); };
   const v = id => $(id).value.trim(), T = TL();
   const target = v(T === "cs" ? "f-cz" : "f-en");
   if (!target) return err(t(T === "cs" ? "err_cz" : "err_en"));
@@ -1869,7 +2355,7 @@ $("wform").addEventListener("submit", e => {
   if (i >= 0) d.words[i] = word; else d.words.push(word);
   FORM.fill = null;
   closeDlg($("dlg")); commit();
-  showToast(prev ? t("t_saved") : t("t_added", target)); state.editing = null;
+  showToast(prev ? t("t_saved") : t("t_added", target)); sfx(prev ? "on" : "success"); state.editing = null;
 });
 
 /* ================= autofill: Claude (Claude version) or free online dictionaries (website) ================= */
@@ -1934,10 +2420,16 @@ $("af-go").addEventListener("click", async () => {
   if (sample) {
     try {
       const res = await enrich(state.dict, [{ w: target || other, hint: target ? other : "" }]);
-      if (!res[0]) throw { code: "empty_completion" };
-      fillFormFrom(res[0].word, res[0].topic);
-      msg.textContent = t("af_claude_done");
-    } catch (e) { msg.classList.add("err"); msg.textContent = sampleErr(e); }
+      const r = res[0];
+      if (!r || !r.word[LF[T]]) throw { code: "empty_completion" };
+      const mainId = T === "cs" ? "f-cz" : "f-en", FIELD = { cs: "f-cz", en: "f-en", uk: "f-uk", ru: "f-ru" };
+      if (target && r.src && r.src !== T && low(r.word[LF[T]]) !== low(target)) {   // typed in another language: move it to its own field
+        const own = FIELD[r.src]; if (own && own !== mainId && !get(own)) $(own).value = target;
+        $(mainId).value = r.word[LF[T]];
+      }
+      fillFormFrom(r.word, r.topic);
+      msg.textContent = t("af_claude_done"); sfx("notify");
+    } catch (e) { msg.classList.add("err"); msg.textContent = sampleErr(e); sfx("error"); }
     finally { btn.disabled = false; }
     return;
   }
@@ -1970,7 +2462,8 @@ $("af-go").addEventListener("click", async () => {
     }
     if (cz && $("f-g").dataset.touched !== "1") { $("f-g").value = guessGender(cz, info?.pos); filled.push(t("af_gender")); }
     msg.textContent = filled.length ? t("af_done", filled.join(", ")) : t("af_none");
-  } catch (_) { msg.classList.add("err"); msg.textContent = t("af_off"); }
+    if (filled.length) sfx("notify");
+  } catch (_) { msg.classList.add("err"); msg.textContent = t("af_off"); sfx("error"); }
   finally { btn.disabled = false; }
 });
 
@@ -1984,6 +2477,7 @@ async function initSample() {
 }
 function sampleErr(e) {
   const c = e && e.code;
+  if (["bad_key", "quota", "offline", "no_model"].includes(c)) return aiErrText(e);
   if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(c)) return t("ph_err_grant");
   if (c === "rate_limited") return t("ph_err_rate");
   if (c === "image_rejected" || c === "images_unavailable") return t("ph_err_img");
@@ -2012,10 +2506,13 @@ function fieldSpec(dk) {
 }
 function topicList(dk) { return topicsSorted(dk).map(tp => `${tp.id} = ${tp.name.en || loc(tp.name)}`).join("\n") || "(none yet)"; }
 function enrichPrompt(dk, items) {
-  return `You fill in entries for a vocabulary app. The learner studies ${dk === "cs" ? "Czech" : "English"}; translations are shown in several languages.
+  const L = dk === "cs" ? "Czech" : "English", others = dk === "cs" ? "English, Ukrainian or Russian" : "Czech, Ukrainian or Russian";
+  return `You fill in entries for a vocabulary app. The learner studies ${L}; translations are shown in several languages.
+An input item may be written in ${L} or in ${others}. When it is not ${L}, find the ${L} word that matches it and make the ENTRY for that ${L} word, filled in completely. Typing in another language is not a reason to set "q".
 Return ONLY JSON, no other text: {"words": [ENTRY, ...]} with exactly one ENTRY per input item, in the same order.
 ENTRY fields:
 ${fieldSpec(dk)}
+- "src": the language the input item was written in: "cs", "en", "uk" or "ru"
 - "topic": the id of the best matching existing topic, or a new topic as {"uk": "...", "en": "...", "cs": "...", "ru": "..."} when none fits
 - "q": true if the input item looks misspelled or unclear and you had to guess
 - "alts": when "q" is true, up to 3 other words the learner probably meant (most likely first); otherwise []
@@ -2059,11 +2556,11 @@ async function enrich(dk, items, signal, onProgress) {           // → one entr
     const list = (Array.isArray(res) ? res : (res && Array.isArray(res.words) ? res.words : [])).filter(x => x && typeof x === "object");
     const used = new Set();
     chunk.forEach((it, j) => {
-      let k = list.length === chunk.length ? j : list.findIndex((x, n) => !used.has(n) && low(x[T] || "") === low(it.w));
+      let k = list.length === chunk.length ? j : list.findIndex((x, n) => !used.has(n) && [x[T], x.cz, x.en, x.uk, x.ru].some(v => v && low(v) === low(it.w)));
       if (k < 0 || used.has(k) || !list[k]) return;
       used.add(k);
       const x = list[k];
-      out[offset + j] = { word: normWord({ ...x, id: undefined, gid: "" }, dk), topic: resolveTopic(dk, x.topic), q: !!x.q, alts: arr(x.alts).slice(0, 3) };
+      out[offset + j] = { word: normWord({ ...x, id: undefined, gid: "" }, dk), topic: resolveTopic(dk, x.topic), q: !!x.q, alts: arr(x.alts).slice(0, 3), src: ["cs", "en", "uk", "ru"].includes(x.src) ? x.src : "" };
     });
     doneN += chunk.length; if (onProgress) onProgress(doneN, items.length);
   };
@@ -2206,7 +2703,7 @@ async function phRun() {
     await sleep(reduced() ? 0 : 450);
     PH.newTopics = [];
     PH.found = buildFound(dk, items, res);
-    rvRender(true);
+    rvRender(true); sfx("notify");
   } catch (e) { phInput(e && e.code === "cancelled" ? "" : sampleErr(e)); }
   finally { PH.ctl = null; }
 }
@@ -2344,7 +2841,7 @@ function rvAdd() {
   Object.assign(PH, { photos: [], found: [], newTopics: [], listText: "", view: "" });
   closeDlg($("phdlg"));
   if (state.dict !== dk) openDict(dk); else { state.animate = true; commit(); }
-  save(); showToast(t("ph_added", picked.length));
+  save(); showToast(t("ph_added", picked.length)); sfx("success");
 }
 $("phbody").addEventListener("click", e => {
   if (PH.view !== "review") return;
@@ -2445,7 +2942,7 @@ function startPractice(items, title, mode) {
   if (!deck.length) { showToast(t(mode === "def" ? "no_def" : "no_words")); return; }
   Object.assign(TR, { deck, queue: shuffle(deck.map((_, i) => i)), known: 0, missed: new Set(), mode, title,
     dirs: deck.map(() => mode === "mix" ? (Math.random() < .5 ? "mt" : "tm") : mode) });
-  $("trainer").hidden = false; document.body.style.overflow = "hidden"; showCard();
+  $("trainer").hidden = false; document.body.style.overflow = "hidden"; sfx("open"); showCard();
 }
 function closeTrainer() { $("trainer").hidden = true; document.body.style.overflow = ""; }
 function cardFace(w, dir) {
@@ -2472,8 +2969,8 @@ function showCard() {
   $("t-stage").innerHTML = `<div class="card" id="card" tabindex="0" role="button" aria-label="${esc(t("card_aria"))}">${paint()}</div>`;
   bindCard($("card"));
 }
-function flip() { if (!TR.queue.length) return; TR.flipped = !TR.flipped; const c = $("card"); c.style.animation = "none"; c.innerHTML = paint(); }
-function judge(ok) { if (!TR.queue.length) return; const i = TR.queue.shift(); if (ok) TR.known++; else { TR.missed.add(i); TR.queue.push(i); } showCard(); }
+function flip() { if (!TR.queue.length) return; sfx("flip"); TR.flipped = !TR.flipped; const c = $("card"); c.style.animation = "none"; c.innerHTML = paint(); }
+function judge(ok) { if (!TR.queue.length) return; sfx(ok ? "know" : "again"); const i = TR.queue.shift(); if (ok) TR.known++; else { TR.missed.add(i); TR.queue.push(i); } showCard(); }
 function fly(ok) {
   const c = $("card"); if (!c) return judge(ok);
   c.style.animation = "none";
@@ -2499,6 +2996,7 @@ function bindCard(c) {
   c.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); flip(); } });
 }
 function showDone() {
+  sfx("done");
   const total = TR.deck.length, first = total - TR.missed.size, missed = [...TR.missed].map(i => TR.deck[i]);
   $("t-foot").hidden = true; $("t-prog").textContent = `${total} / ${total}`;
   $("t-stage").innerHTML = `<div class="done"><h2>${esc(t("done_h"))}</h2><p>${t("first_try", first, total)}</p>` +
@@ -2527,7 +3025,10 @@ function refreshSettings() {
   $("lastbackup").textContent = store.lastBackup ? t("last_backup", new Date(store.lastBackup).toLocaleDateString(LOCALES[LANG])) : t("no_backup");
   $("imp-go").textContent = $("imp-replace").checked ? t("imp_replace") : t("imp_go");
   renderTrPicker($("set-tr-cs"), "cs", afterTrChange); renderTrPicker($("set-tr-en"), "en", afterTrChange);
-  $("syncline").classList.toggle("on", !!cloud); $("synctext").textContent = t(cloud ? "sync_cloud" : "sync_local");
+  refreshSyncLine(true);
+  $("sync-move").hidden = syncMode !== "cloud"; $("sync-move").textContent = t("sync_to_web");
+  refreshAiSettings(); driveUi(); if (driveReady()) loadGis().catch(() => {});
+  $("s-sound").checked = soundOn();
   $("home-p").textContent = t(BUILD === "claude" ? "home_p_claude" : "home_p");
   $("set-ver").textContent = t("s_version", APP_VERSION) + " · " + (BUILD === "claude" ? "Claude" : "Web");
   applyPlural(); applyTheme();
@@ -2538,9 +3039,9 @@ function openSettings() {
 }
 $("settings-btn").addEventListener("click", openSettings);
 $("ch-settings").addEventListener("click", openSettings);
-$("langseg").addEventListener("click", e => { const b = e.target.closest("[data-lang]"); if (b) { setLang(b.dataset.lang); refreshSettings(); } });
-$("themeseg").addEventListener("click", e => { const b = e.target.closest("[data-theme-v]"); if (b) { store.prefs.theme = b.dataset.themeV; save(); applyTheme(); } });
-$("s-plural").addEventListener("change", e => { store.prefs.plural = e.target.checked; save(); if (state.dict) { refreshChrome(); render(); } });
+$("langseg").addEventListener("click", e => { const b = e.target.closest("[data-lang]"); if (b) { sfx("tap"); setLang(b.dataset.lang); refreshSettings(); } });
+$("themeseg").addEventListener("click", e => { const b = e.target.closest("[data-theme-v]"); if (b) { sfx("tap"); store.prefs.theme = b.dataset.themeV; save(); applyTheme(); } });
+$("s-plural").addEventListener("change", e => { sfx(e.target.checked ? "on" : "off"); store.prefs.plural = e.target.checked; save(); if (state.dict) { refreshChrome(); render(); } });
 const backupText = () => JSON.stringify({ app: "vokab", type: "backup", version: 2, exportedAt: new Date().toISOString(), dicts: store.dicts });
 const backupName = () => `vocabulary-${new Date().toISOString().slice(0, 10)}.json`;
 function markBackup() { store.lastBackup = Date.now(); save(); $("lastbackup").textContent = t("last_backup", new Date().toLocaleDateString(LOCALES[LANG])); }
@@ -2571,6 +3072,8 @@ async function copyText(text, okMsg) {
   }
 }
 $("exp-copy").addEventListener("click", async () => { if (await copyText(backupText(), t("copied_backup"))) markBackup(); });
+$("sync-copy").addEventListener("click", async () => { if (await copyText(backupText(), t("copied_backup"))) { markBackup(); sfx("success"); } });
+$("s-sound").addEventListener("change", e => { dev.sound = e.target.checked; saveDev(); if (e.target.checked) { unlockAudio(); setTimeout(() => sfx("on"), 30); } });
 $("imp-file").addEventListener("change", e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
   const r = new FileReader(); r.onload = () => { $("imp-text").value = String(r.result || ""); $("imp-err").hidden = true; }; r.readAsText(f); e.target.value = "";
@@ -2664,58 +3167,561 @@ $("imp-go").addEventListener("click", () => {
   if (replace && $("imp-go").dataset.sure !== "1") { $("imp-go").dataset.sure = "1"; $("imp-go").textContent = t("imp_sure"); return; }
   try {
     const st = importText($("imp-text").value, replace);
-    $("imp-text").value = ""; closeDlg($("setdlg"));
+    $("imp-text").value = ""; closeDlg($("setdlg")); sfx("success");
     if (!state.dict) openDict(st.dict || "cs");
     showToast(importSummary(st, replace));
-  } catch (e) { err(e.message || t("imp_bad")); }
+  } catch (e) { err(e.message || t("imp_bad")); sfx("error"); }
 });
 $("prompt-cs").addEventListener("click", () => copyText(chatPrompt("cs"), t("prompt_copied")));
 $("prompt-en").addEventListener("click", () => copyText(chatPrompt("en"), t("prompt_copied")));
-async function loadWordSet(manual) {
-  try {
-    const r = await fetch("words-cs.json", { cache: "no-cache" });
-    if (!r.ok) throw new Error("http");
-    const pack = await r.json(), stats = { added: 0, updated: 0, groups: 0, sheets: 0 };
-    mergeInto("cs", normDict(pack.dicts.cs, "cs"), stats);
-    delete store.needsContent; save(); state.animate = true;
-    if (state.dict) render(); else if (booted && !$("chooser").hidden) showChooser();
-    showToast(manual ? t("imp_added", stats.added) : t("content_updated"));
-  } catch (_) { if (manual) showToast(t("load_fail")); }
+/* ================= sounds: soft, short, made on the fly; off switch in Settings (per device) ================= */
+const SFX = { ctx: null, out: null, last: 0 };
+const soundOn = () => dev.sound !== false;
+function unlockAudio() {                                   // browsers allow audio only after the first tap
+  if (!soundOn()) return;
+  if (!SFX.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try {
+      const c = new AC(), comp = c.createDynamicsCompressor(), out = c.createGain();
+      out.gain.value = 1.5; out.connect(comp); comp.connect(c.destination);
+      const b = c.createBufferSource(); b.buffer = c.createBuffer(1, 1, 22050); b.connect(c.destination); b.start(0);
+      SFX.ctx = c; SFX.out = out;
+    } catch (_) { return; }
+  }
+  if (SFX.ctx.state === "suspended") SFX.ctx.resume().catch(() => {});
 }
+addEventListener("pointerdown", unlockAudio, { capture: true, passive: true });
+addEventListener("keydown", unlockAudio, { capture: true });
+function tone(c, at, { f = 880, f2 = 0, type = "sine", dur = .2, vol = .06, attack = .008 } = {}) {
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, at);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, at + dur * .8);
+  g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + attack); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  o.connect(g); g.connect(SFX.out); o.start(at); o.stop(at + dur + .05);
+}
+function air(c, at, { dur = .22, vol = .05, from = 2600, to = 500, q = .9 } = {}) {   // a filtered breath of noise
+  const n = Math.max(1, Math.floor(c.sampleRate * dur)), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = buf; bp.type = "bandpass"; bp.Q.value = q;
+  bp.frequency.setValueAtTime(from, at); bp.frequency.exponentialRampToValueAtTime(to, at + dur);
+  g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + dur * .3); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  s.connect(bp); bp.connect(g); g.connect(SFX.out); s.start(at); s.stop(at + dur + .02);
+}
+const bell = (c, at, f, dur, vol) => { tone(c, at, { f, dur, vol, attack: .01 }); tone(c, at, { f: f * 2.01, dur: dur * .45, vol: vol * .18, attack: .008 }); };
+const SOUNDS = {
+  tap: (c, t0) => tone(c, t0, { f: 1900, f2: 1500, dur: .045, vol: .045, attack: .002 }),
+  on: (c, t0) => tone(c, t0, { f: 1250, f2: 1650, dur: .065, vol: .05, attack: .003 }),
+  off: (c, t0) => tone(c, t0, { f: 1300, f2: 950, dur: .065, vol: .045, attack: .003 }),
+  open: (c, t0) => { air(c, t0, { dur: .16, vol: .025, from: 900, to: 2600, q: .7 }); tone(c, t0 + .02, { f: 587, f2: 880, dur: .17, vol: .04 }); },
+  enter: (c, t0) => { air(c, t0, { dur: .35, vol: .016, from: 700, to: 3200, q: .6 }); [[659.25, .02], [987.77, .11], [1318.5, .2]].forEach(([f, d]) => bell(c, t0 + d, f, 1.1, .038)); },
+  success: (c, t0) => { bell(c, t0, 783.99, .5, .045); bell(c, t0 + .08, 1174.66, .6, .04); },
+  swoosh: (c, t0) => air(c, t0, { dur: .26, vol: .06, from: 2800, to: 480 }),
+  flip: (c, t0) => air(c, t0, { dur: .1, vol: .05, from: 1500, to: 2600, q: 1.4 }),
+  know: (c, t0) => { bell(c, t0, 1046.5, .35, .04); bell(c, t0 + .06, 1567.98, .45, .03); },
+  again: (c, t0) => tone(c, t0, { f: 494, f2: 392, dur: .22, vol: .035, type: "triangle" }),
+  done: (c, t0) => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(c, t0 + i * .09, f, .9, .036)),
+  notify: (c, t0) => { bell(c, t0, 880, .5, .035); bell(c, t0 + .1, 1318.5, .7, .03); },
+  error: (c, t0) => { tone(c, t0, { f: 330, dur: .13, vol: .04, type: "triangle" }); tone(c, t0 + .11, { f: 262, dur: .2, vol: .04, type: "triangle" }); },
+};
+function sfx(name) {
+  const c = SFX.ctx;
+  if (!c || !soundOn() || c.state === "closed" || !SOUNDS[name]) return;
+  const now = performance.now();
+  if ((name === "tap" || name === "open") && now - SFX.last < 60) return;   // one sound per gesture
+  SFX.last = now;
+  try { SOUNDS[name](c, c.currentTime + .005); } catch (_) {}
+}
+
+/* ================= updates (website): a banner when a new version is out; words always stay on the device ================= */
+const verNum = v => String(v || "0").split(".").map(n => parseInt(n, 10) || 0);
+const newer = (a, b) => { const x = verNum(a), y = verNum(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d > 0; } return false; };
+let updShown = "", updBusy = false, lastUpdCheck = 0;
+async function checkUpdate() {
+  if (BUILD !== "web" || !/^https?:$/.test(location.protocol) || updBusy || Date.now() - lastUpdCheck < 60000) return;
+  lastUpdCheck = Date.now();
+  try {
+    const r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j && j.version && newer(j.version, APP_VERSION) && updShown !== String(j.version)) showUpdate(String(j.version));
+  } catch (_) {}
+}
+function showUpdate(v) {
+  updShown = v;
+  $("upd-text").innerHTML = `<b>${esc(t("upd_ready", v))}</b> <span>${esc(t("upd_safe"))}</span>`;
+  $("updbar").hidden = false; sfx("notify");
+}
+function keepCopy(from) {                                  // a safety copy of the words from before an update
+  const raw = lsGet(KEY);
+  if (raw) lsSet("vokab:before-update", JSON.stringify({ at: Date.now(), from, data: raw }));
+}
+async function applyUpdate() {
+  if (updBusy) return;
+  updBusy = true; $("upd-go").disabled = true; $("upd-go").textContent = "…";
+  persistLocal(); keepCopy(APP_VERSION);
+  const pages = [...new Set(["./", "index.html", "cs.html", "en.html", location.pathname])];
+  await Promise.all(pages.map(u => fetch(u, { cache: "reload" }).catch(() => {})));     // refresh the browser's copy of the pages
+  try { const regs = (navigator.serviceWorker && await navigator.serviceWorker.getRegistrations()) || []; await Promise.all(regs.map(r => r.update().catch(() => {}))); } catch (_) {}
+  try { const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (_) {}
+  location.reload();
+}
+$("upd-go").addEventListener("click", applyUpdate);
+$("upd-x").addEventListener("click", () => { $("updbar").hidden = true; });
+
+/* ================= your own AI on the website: Gemini or OpenAI, with each person's own key (kept on this device) ================= */
+const AIP = {
+  gemini: { name: "Gemini", keyUrl: "https://aistudio.google.com/apikey" },
+  openai: { name: "GPT", keyUrl: "https://platform.openai.com/api-keys" },
+};
+const aiCfg = () => (BUILD === "web" && dev.ai && dev.ai.key && AIP[dev.ai.p]) ? dev.ai : null;
+const aiName = () => BUILD === "claude" ? "Claude" : (aiCfg() ? AIP[dev.ai.p].name : "AI");
+const aiErr = (code, message) => Object.assign(new Error(message || code), { code });
+const blobB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+function parseAiJSON(text) {
+  let s = String(text || "").trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/); if (fence) s = fence[1].trim();
+  try { return JSON.parse(s); } catch (_) {}
+  const a = s.search(/[[{]/), b = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
+  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch (_) {} }
+  throw aiErr("bad_reply");
+}
+async function aiFetch(url, init, signal) {
+  let r;
+  try { r = await fetch(url, { ...init, signal }); }
+  catch (e) { throw aiErr(e && e.name === "AbortError" ? "cancelled" : "offline"); }
+  if (r.ok) return r.json();
+  let body = null; try { body = await r.json(); } catch (_) {}
+  const msg = JSON.stringify(body || "").toLowerCase();
+  if (r.status === 429) throw aiErr(/quota|billing|insufficient/.test(msg) ? "quota" : "rate_limited");
+  if (r.status === 401 || r.status === 403 || /api[_ ]?key|invalid.*key|permission/.test(msg)) throw aiErr("bad_key");
+  if (r.status === 404 || /model.*(not.*found|does not exist|not supported)/.test(msg)) throw aiErr("no_model");
+  if (r.status === 402 || /quota|billing|insufficient/.test(msg)) throw aiErr("quota");
+  throw aiErr("ai_failed", "http " + r.status);
+}
+async function geminiModels(key) {                          // the newest Flash model this key can use
+  const j = await aiFetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { headers: { "x-goog-api-key": key } });
+  const ok = (j.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|embed/i.test(m.name));
+  const score = m => { const v = parseFloat((m.name.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0); return v * 10 - (/lite/.test(m.name) ? 3 : 0) - (/preview|exp/.test(m.name) ? 5 : 0); };
+  return ok.sort((a, b) => score(b) - score(a)).map(m => m.name.replace(/^models\//, ""));
+}
+async function geminiCall(cfg, prompt, images, signal) {
+  const parts = [{ text: prompt }];
+  for (const b of images) parts.push({ inline_data: { mime_type: b.type || "image/jpeg", data: await blobB64(b) } });
+  const body = JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json", temperature: .3 } });
+  const tryModel = m => aiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`,
+    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": cfg.key }, body }, signal);
+  let model = cfg.model || "gemini-flash-latest", j;
+  try { j = await tryModel(model); }
+  catch (e) {
+    if (e.code !== "no_model") throw e;
+    const list = await geminiModels(cfg.key); if (!list.length) throw e;
+    model = list[0]; j = await tryModel(model);
+  }
+  if (cfg.model !== model) { cfg.model = model; saveDev(); }
+  const c = (j.candidates || [])[0];
+  if (!c) throw aiErr(j.promptFeedback?.blockReason ? "blocked" : "empty_completion");
+  return (c.content?.parts || []).map(p => p.text || "").join("");
+}
+async function openaiCall(cfg, prompt, images, signal) {
+  const content = [{ type: "text", text: prompt }];
+  for (const b of images) content.push({ type: "image_url", image_url: { url: `data:${b.type || "image/jpeg"};base64,${await blobB64(b)}` } });
+  const models = [cfg.model, "gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"].filter(Boolean);
+  let last = null;
+  for (const model of [...new Set(models)]) {
+    try {
+      const j = await aiFetch("https://api.openai.com/v1/chat/completions", { method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + cfg.key },
+        body: JSON.stringify({ model, messages: [{ role: "user", content }], response_format: { type: "json_object" } }) }, signal);
+      if (cfg.model !== model) { cfg.model = model; saveDev(); }
+      return j.choices?.[0]?.message?.content || "";
+    } catch (e) { last = e; if (e.code !== "no_model") throw e; }
+  }
+  throw last || aiErr("no_model");
+}
+async function aiJSON(prompt, opts = {}) {
+  const cfg = aiCfg(); if (!cfg) throw aiErr("not_granted");
+  const images = opts.images || [];
+  const text = await (cfg.p === "gemini" ? geminiCall : openaiCall)(cfg, prompt + "\nAnswer with JSON only.", images, opts.signal);
+  return parseAiJSON(text);
+}
+function useOwnAi() {                                        // the photo import, Fill and re-fill code calls sample.json(); here it goes to the person's own AI
+  if (BUILD !== "web") return;
+  AI_NAME = aiCfg() ? AIP[dev.ai.p].name : "Claude";
+  if (!aiCfg()) { sample = null; sampleImages = null; return; }
+  const s = async () => { throw aiErr("not_granted"); };
+  s.json = (prompt, opts) => aiJSON(prompt, opts);
+  s.own = true;
+  sample = s; sampleImages = { maxCount: MAX_PHOTOS, maxInputBytes: 3.5e6, mediaTypes: ["image/jpeg", "image/png", "image/webp"] };
+}
+function refreshAiSettings() {
+  const sec = $("ai-sec"); if (!sec) return;
+  sec.hidden = BUILD !== "web";
+  if (BUILD !== "web") return;
+  const p = AIP[$("ai-sec").dataset.p] ? $("ai-sec").dataset.p : (dev.ai?.p || "gemini");
+  $("ai-sec").dataset.p = p;
+  document.querySelectorAll("#ai-seg [data-ai]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ai === p)));
+  $("ai-get").href = AIP[p].keyUrl; $("ai-get").textContent = t(p === "gemini" ? "ai_get_gemini" : "ai_get_openai");
+  $("ai-note").textContent = t(p === "gemini" ? "ai_note_gemini" : "ai_note_openai");
+  const on = aiCfg();
+  $("ai-key").value = ""; $("ai-key").placeholder = on && dev.ai.p === p ? "••••••••" + dev.ai.key.slice(-4) : t("ai_key_ph");
+  $("ai-remove").hidden = !on;
+  $("ai-state").classList.toggle("on", !!on);
+  $("ai-status").textContent = on ? t("ai_on", AIP[dev.ai.p].name) + (dev.ai.model ? ` · ${dev.ai.model}` : "") : t("ai_off");
+}
+if ($("ai-seg")) {
+  $("ai-seg").addEventListener("click", e => { const b = e.target.closest("[data-ai]"); if (!b) return; sfx("tap"); $("ai-sec").dataset.p = b.dataset.ai; refreshAiSettings(); });
+  $("ai-check").addEventListener("click", async () => {
+    const p = $("ai-sec").dataset.p || "gemini", key = $("ai-key").value.trim() || (dev.ai?.p === p ? dev.ai.key : "");
+    const msg = $("ai-msg"); msg.hidden = false; msg.classList.remove("err");
+    if (!key) { msg.classList.add("err"); msg.textContent = t("ai_need_key"); sfx("error"); return; }
+    const prev = dev.ai; dev.ai = { p, key, model: prev?.p === p && prev.key === key ? prev.model : "" };
+    $("ai-check").disabled = true; msg.textContent = t("ai_checking");
+    try {
+      const j = await aiJSON('Reply with this JSON object: {"ok": true}');
+      if (!j || j.ok !== true) throw aiErr("bad_reply");
+      saveDev(); useOwnAi(); msg.textContent = t("ai_ok", AIP[p].name); sfx("success");
+    } catch (e) {
+      dev.ai = prev; saveDev(); useOwnAi();
+      msg.classList.add("err"); msg.textContent = aiErrText(e); sfx("error");
+    } finally { $("ai-check").disabled = false; refreshAiSettings(); }
+  });
+  $("ai-remove").addEventListener("click", () => { delete dev.ai; saveDev(); useOwnAi(); $("ai-msg").hidden = true; refreshAiSettings(); showToast(t("ai_removed")); });
+}
+function aiErrText(e) {
+  const c = e && e.code;
+  if (c === "bad_key") return t("ai_err_key");
+  if (c === "quota") return t("ai_err_quota");
+  if (c === "rate_limited") return t("ph_err_rate");
+  if (c === "offline") return t("ai_err_offline");
+  if (c === "no_model") return t("ai_err_model");
+  return t("ph_err");
+}
+
+/* ================= website sync through each person's own Google Drive (hidden app folder) =================
+   Every word, topic and sheet carries "u" (when it last changed); deleted ones leave a short note in store.gone,
+   so two devices can be merged item by item without losing either side's changes. */
+const GCID = () => String(window.VOKAB_GOOGLE_CLIENT_ID || "").trim();
+const driveReady = () => BUILD === "web" && /\.apps\.googleusercontent\.com$/.test(GCID()) && /^https?:$/.test(location.protocol);
+const DRIVE_FILE = "vokab-sync.json";
+const known = new Map();                                     // "cs:w:id" -> canonical JSON without "u"
+const itemKeys = () => { const out = []; for (const dk of ["cs", "en"]) for (const kind of ["w", "t", "s"]) for (const x of store.dicts[dk][listKey(kind)]) out.push([`${dk}:${kind}:${x.id}`, x]); return out; };
+const bare = x => { const { u, ...r } = x; return canon(clean(r)); };
+const prefsBare = () => canon(clean(store.prefs));
+function rememberAll() { known.clear(); for (const [k, x] of itemKeys()) known.set(k, bare(x)); known.set("prefs", prefsBare()); }
+function stampChanges() {                                    // called on every save: stamp what changed since the last save
+  const now = Date.now(), seen = new Set();
+  store.gone = store.gone || {};
+  for (const [k, x] of itemKeys()) {
+    seen.add(k);
+    const c = bare(x);
+    if (known.get(k) !== c) { x.u = now; known.set(k, c); delete store.gone[k]; }
+  }
+  for (const k of [...known.keys()]) if (k !== "prefs" && !seen.has(k)) { known.delete(k); store.gone[k] = now; }
+  const pc = prefsBare(); if (known.get("prefs") !== pc) { known.set("prefs", pc); store.prefsU = now; }
+  const old = now - 90 * 864e5; for (const k of Object.keys(store.gone)) if (store.gone[k] < old) delete store.gone[k];
+}
+function syncPayload() { return { app: "vokab", type: "sync", version: 2, at: Date.now(), dicts: store.dicts, prefs: store.prefs, prefsU: store.prefsU || 0, gone: store.gone || {} }; }
+function mergeRemote(remote) {                               // newest version of every item wins; deletions win over older versions
+  const gone = { ...(remote.gone || {}) };
+  for (const [k, v] of Object.entries(store.gone || {})) gone[k] = Math.max(gone[k] || 0, v);
+  let changed = false;
+  for (const dk of ["cs", "en"]) {
+    const rd = normDictKeepU(remote.dicts?.[dk], dk);
+    for (const kind of ["w", "t", "s"]) {
+      const key = listKey(kind), mine = store.dicts[dk][key], theirs = rd[key], out = [], ids = new Set([...mine.map(x => x.id), ...theirs.map(x => x.id)]);
+      for (const id of ids) {
+        const a = mine.find(x => x.id === id), b = theirs.find(x => x.id === id), g = gone[`${dk}:${kind}:${id}`] || 0;
+        let pick = a && b ? ((b.u || 0) > (a.u || 0) ? b : a) : (a || b);
+        if (g && g >= (pick.u || 0)) pick = null;
+        if (pick) out.push(pick);
+        if (pick !== a) changed = true;
+      }
+      store.dicts[dk][key] = out;
+    }
+    ensureTopics(store.dicts[dk]);
+  }
+  if ((remote.prefsU || 0) > (store.prefsU || 0) && remote.prefs) { store.prefs = normPrefs(remote.prefs); store.prefsU = remote.prefsU; changed = true; }
+  store.gone = gone;
+  return changed;
+}
+function normDictKeepU(d, dk) {
+  const nd = normDict(d || {}, dk);
+  for (const kind of ["w", "t", "s"]) { const src = (d && d[listKey(kind)]) || []; nd[listKey(kind)].forEach((x, i) => { const u = +(src.find(s => String(s.id) === x.id) || {}).u; if (u) x.u = u; }); }
+  return nd;
+}
+
+/* sign-in: Google gives websites a key for about an hour, so after that one tap renews it */
+const DRV = { tok: null, exp: 0, client: null, busy: false, timer: null, waiters: [] };
+function loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.onload = () => res(); s.onerror = () => rej(aiErr("offline")); document.head.appendChild(s); });
+}
+function tokenValid() {
+  if (!DRV.tok && dev.drive?.tok && dev.drive.exp > Date.now() + 60000) { DRV.tok = dev.drive.tok; DRV.exp = dev.drive.exp; }
+  return DRV.tok && DRV.exp > Date.now() + 60000;
+}
+function driveToken(ask) {                                   // ask = true only from a tap: Google may show a small window
+  if (tokenValid()) return Promise.resolve(DRV.tok);
+  if (!ask) return Promise.resolve(null);
+  if (!window.google?.accounts?.oauth2) { loadGis().catch(() => {}); return Promise.reject(aiErr("gis_loading")); }
+  return new Promise((res, rej) => {                       // no waiting before the request: browsers allow the Google window only straight from a tap
+    const first = !dev.drive?.on;
+    DRV.client = google.accounts.oauth2.initTokenClient({
+      client_id: GCID(), scope: "https://www.googleapis.com/auth/drive.appdata",
+      callback: r => {
+        if (!r || r.error || !r.access_token) return rej(aiErr(r && r.error === "access_denied" ? "cancelled" : "drive_denied"));
+        DRV.tok = r.access_token; DRV.exp = Date.now() + (+r.expires_in || 3600) * 1000;
+        dev.drive = { ...(dev.drive || {}), on: true, tok: DRV.tok, exp: DRV.exp }; saveDev(); res(DRV.tok);
+      },
+      error_callback: e => rej(aiErr(e && e.type === "popup_closed" ? "cancelled" : "drive_denied")),
+    });
+    DRV.client.requestAccessToken({ prompt: first ? "consent" : "" });
+  });
+}
+async function gfetch(url, init = {}) {
+  const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: "Bearer " + DRV.tok } }).catch(() => { throw aiErr("offline"); });
+  if (r.status === 401) { DRV.tok = null; if (dev.drive) { delete dev.drive.tok; saveDev(); } throw aiErr("drive_expired"); }
+  if (!r.ok) throw aiErr(r.status === 403 || r.status === 429 ? "rate_limited" : "drive_failed", "http " + r.status);
+  return r;
+}
+async function driveFind() {
+  if (dev.drive?.fileId) return dev.drive.fileId;
+  const q = encodeURIComponent(`name='${DRIVE_FILE}' and trashed=false`);
+  const j = await (await gfetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,modifiedTime)&orderBy=modifiedTime desc`)).json();
+  const id = j.files?.[0]?.id || "";
+  if (id) { dev.drive.fileId = id; saveDev(); }
+  return id;
+}
+async function driveUpload(id, text) {
+  if (id) return gfetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: text });
+  const meta = { name: DRIVE_FILE, parents: ["appDataFolder"], mimeType: "application/json" };
+  const fd = new FormData();
+  fd.append("metadata", new Blob([JSON.stringify(meta)], { type: "application/json" }));
+  fd.append("file", new Blob([text], { type: "application/json" }));
+  const j = await (await gfetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", body: fd })).json();
+  dev.drive.fileId = j.id; saveDev();
+}
+async function driveSync(ask) {
+  if (!driveReady() || !dev.drive?.on) return false;
+  if (DRV.busy) return new Promise(r => DRV.waiters.push(r));
+  DRV.busy = true; driveUi();
+  let ok = false;
+  try {
+    const tok = await driveToken(ask);
+    if (!tok) { driveUi(); return false; }
+    stampChanges();
+    let id = await driveFind(), remote = null;
+    if (id) {
+      try { remote = await (await gfetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json(); }
+      catch (e) { if (e.code === "drive_failed") { id = ""; dev.drive.fileId = ""; saveDev(); } else throw e; }
+    }
+    let changed = false;
+    if (remote && remote.app === "vokab") changed = mergeRemote(remote);
+    rememberAll();
+    persistLocal();
+    if (changed) { LANG = pickLang(); applyI18n(); applyTheme(); applyPlural(); if (state.dict) { refreshChrome(); render(); } else if (!$("chooser").hidden) showChooser(); }
+    const text = JSON.stringify(syncPayload());
+    if (!remote || canon(clean({ d: remote.dicts, p: remote.prefs, g: remote.gone })) !== canon(clean({ d: store.dicts, p: store.prefs, g: store.gone }))) await driveUpload(id, text);
+    dev.drive.last = Date.now(); dev.drive.dirty = false; saveDev();
+    $("syncbar").hidden = true;
+    ok = true;
+    return true;
+  } catch (e) {
+    console.warn("drive sync", e && e.code);
+    if (e.code === "drive_expired" && !ask) showSyncBar();
+    else if (ask && e.code !== "cancelled") showToast(t(e.code === "offline" ? "ai_err_offline" : e.code === "gis_loading" ? "drive_wait" : "drive_fail"));
+    return false;
+  } finally {
+    DRV.busy = false; driveUi();
+    const w = DRV.waiters.splice(0); w.forEach(r => r(ok));
+  }
+}
+function driveAfterSave() {                                   // after each change: send it soon if the sign-in is still fresh
+  if (!driveReady() || !dev.drive?.on) return;
+  if (!dev.drive.dirty) { dev.drive.dirty = true; saveDev(); }
+  clearTimeout(DRV.timer);
+  if (tokenValid()) DRV.timer = setTimeout(() => driveSync(false), 2500);
+  else showSyncBar();
+}
+function showSyncBar() {
+  if (!driveReady() || !dev.drive?.on || !booted) return;
+  $("syncbar").hidden = false;
+}
+function driveUi() {
+  const sec = $("drive-sec"); if (!sec) return;
+  sec.hidden = BUILD !== "web";
+  if (BUILD !== "web") return;
+  const ready = driveReady(), on = ready && !!dev.drive?.on;
+  $("drive-connect").hidden = !ready || on; $("drive-connect").parentElement.hidden = !ready;
+  $("drive-now").hidden = !on; $("drive-off").hidden = !on;
+  $("drive-now").disabled = DRV.busy;
+  $("drive-state").classList.toggle("on", on);
+  $("drive-status").textContent = !ready ? t("drive_unset") : !on ? t("drive_offline") :
+    DRV.busy ? t("drive_syncing") : dev.drive.last ? t("drive_last", new Date(dev.drive.last).toLocaleString(LOCALES[LANG], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) : t("drive_on");
+  $("sb-go").disabled = DRV.busy;
+}
+async function driveConnect() {
+  sfx("tap");
+  dev.drive = { ...(dev.drive || {}), on: false }; saveDev();
+  try {
+    await driveToken(true);
+    dev.drive.on = true; saveDev();
+    const ok = await driveSync(true);
+    if (ok) { showToast(t("drive_connected")); sfx("success"); }
+  } catch (e) {
+    if (!dev.drive?.tok) { delete dev.drive; saveDev(); }
+    if (e && e.code !== "cancelled") showToast(t(e.code === "gis_loading" ? "drive_wait" : "drive_fail"));
+  }
+  driveUi();
+}
+function driveDisconnect() {
+  const tok = DRV.tok;
+  DRV.tok = null; DRV.exp = 0; delete dev.drive; saveDev(); $("syncbar").hidden = true;
+  try { if (tok && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(tok, () => {}); } catch (_) {}
+  driveUi(); showToast(t("drive_disconnected"));
+}
+if ($("drive-connect")) {
+  $("drive-connect").addEventListener("click", driveConnect);
+  $("drive-now").addEventListener("click", async () => { sfx("tap"); if (await driveSync(true)) { showToast(t("drive_done")); sfx("success"); } });
+  $("drive-off").addEventListener("click", driveDisconnect);
+  $("sb-go").addEventListener("click", async () => { sfx("tap"); if (await driveSync(true)) { showToast(t("drive_done")); sfx("success"); } });
+  $("sb-x").addEventListener("click", () => { $("syncbar").hidden = true; });
+}
+function driveBoot() {                                       // on start: sync now if the sign-in is still fresh, otherwise offer a one-tap sync
+  if (!driveReady() || !dev.drive?.on) return;
+  if (tokenValid()) driveSync(false); else showSyncBar();
+  setInterval(() => { if (!document.hidden && dev.drive?.on && tokenValid()) driveSync(false); }, 90000);   // pick up the other device's changes
+}
+
+/* ================= the book logo and a touch of neon on the start screens ================= */
+const FINE_POINTER = matchMedia("(hover: hover) and (pointer: fine)").matches;
+document.querySelectorAll("[data-book]").forEach(b => {
+  b.addEventListener("click", () => {                        // a tap on the book: it peeks open and closes again
+    if (b.classList.contains("open") || b.classList.contains("peek")) return;
+    sfx("flip"); b.classList.add("peek"); setTimeout(() => b.classList.remove("peek"), 650);
+  });
+});
+function neonZone(root) {
+  let raf = 0, last = null;
+  const place = (el, x, y) => { const r = el.getBoundingClientRect(); el.style.setProperty("--cx", (x - r.left) + "px"); el.style.setProperty("--cy", (y - r.top) + "px"); };
+  root.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse") return;
+    last = e; if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0; const ev = last;
+      root.style.setProperty("--mx", ev.clientX + "px"); root.style.setProperty("--my", ev.clientY + "px"); root.classList.add("lit");
+      const card = ev.target.closest && ev.target.closest(".ng"); if (card) place(card, ev.clientX, ev.clientY);
+      const bk = root.querySelector("[data-book]");
+      if (bk && !reduced()) {                                // the book turns a little toward the pointer
+        const r = bk.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const nx = Math.max(-1, Math.min(1, (ev.clientX - cx) / (innerWidth / 2))), ny = Math.max(-1, Math.min(1, (ev.clientY - cy) / (innerHeight / 2)));
+        bk.style.setProperty("--tx", nx.toFixed(3)); bk.style.setProperty("--ty", ny.toFixed(3));
+      }
+    });
+  });
+  root.addEventListener("pointerleave", () => { root.classList.remove("lit"); const bk = root.querySelector("[data-book]"); if (bk) { bk.style.setProperty("--tx", 0); bk.style.setProperty("--ty", 0); } });
+  root.addEventListener("pointerdown", e => {
+    const card = e.target.closest(".ng");
+    if (card) { place(card, e.clientX, e.clientY); card.classList.remove("tap"); void card.offsetWidth; card.classList.add("tap"); setTimeout(() => card.classList.remove("tap"), 700); }
+    if (e.pointerType !== "mouse") {                       // phones: the glow appears where you touch
+      root.style.setProperty("--mx", e.clientX + "px"); root.style.setProperty("--my", e.clientY + "px");
+      root.classList.add("lit"); clearTimeout(root._lit); root._lit = setTimeout(() => root.classList.remove("lit"), 900);
+    }
+  });
+}
+neonZone($("chooser")); neonZone($("onboard"));
+async function openFromStart(k, rootId) {                   // the book opens, then the dictionary appears
+  const root = $(rootId), book = root.querySelector("[data-book]");
+  sfx("enter");
+  if (reduced() || !book || root.classList.contains("leaving")) return openDict(k, true);
+  root.classList.add("leaving"); book.classList.remove("peek"); book.classList.add("open");
+  await sleep(640);
+  openDict(k, true);
+  requestAnimationFrame(() => { root.classList.remove("leaving"); book.classList.remove("open"); });
+}
+
+/* ================= help ================= */
+function helpHTML(q) {
+  const data = HELP[LANG] || HELP.en, f = fold(q || "");
+  const fmt = s => s.split(/\n\n+/).map(p => /^- /m.test(p)
+    ? `<ul>${p.split("\n").map(l => `<li>${helpInline(l.replace(/^- /, ""))}</li>`).join("")}</ul>`
+    : `<p>${helpInline(p).replace(/\n/g, "<br>")}</p>`).join("");
+  let html = "", n = 0;
+  data.forEach(([sec, items], si) => {
+    const shown = items.filter(([qq, a]) => !f || fold(qq + " " + a).includes(f));
+    if (!shown.length) return;
+    html += `<section class="hsec" style="--i:${Math.min(si, 8)}"><h3>${esc(sec)}</h3>` +
+      shown.map(([qq, a]) => `<details${f && shown.length < 4 ? " open" : ""}><summary>${esc(qq)}</summary><div class="ha">${fmt(a)}</div></details>`).join("") + `</section>`;
+    n += shown.length;
+  });
+  return n ? html : `<p class="hint">${esc(t("help_none"))}</p>`;
+}
+function helpInline(s) {
+  const links = [];
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, txt, url) => { links.push([txt, url]); return `\u0000${links.length - 1}\u0000`; });
+  let h = inline(s);
+  h = h.replace(/\u0000(\d+)\u0000/g, (_, i) => `<a href="${esc(links[+i][1])}" target="_blank" rel="noopener">${esc(links[+i][0])}</a>`);
+  return h;
+}
+function openHelp(topic) {
+  $("help-q").value = topic || "";
+  $("helpbody").innerHTML = helpHTML(topic);
+  openDlg($("helpdlg"));
+  $("helpbody").scrollTop = 0;
+}
+$("help-q").addEventListener("input", () => { $("helpbody").innerHTML = helpHTML($("help-q").value); });
+$("helpbody").addEventListener("toggle", e => { if (e.target.open) sfx("tap"); }, true);
+["help-btn", "ch-help", "ob-help", "set-help"].forEach(id => { const el = $(id); if (el) el.addEventListener("click", () => openHelp()); });
 
 /* ================= start ================= */
 async function boot() {
   const t0 = Date.now();
+  if (dev.lastVersion && dev.lastVersion !== APP_VERSION) keepCopy(dev.lastVersion);
   store = loadLocal();
+  if (BUILD === "web") { rememberAll(); useOwnAi(); if (driveReady() && dev.drive?.on) loadGis().catch(() => {}); }
   LANG = pickLang(); applyI18n(); applyTheme(); applyPlural();
   const slow = setTimeout(() => { $("sp-status").textContent = t("loading"); }, 1200);
   if (window.claude && typeof window.claude.use === "function") {
-    let db = null;
-    try { db = await window.claude.use("db"); } catch (_) {}
-    if (db) {
-      const cached = store;
+    const use = n => window.claude.use(n).catch(() => null);
+    const [db, user] = await Promise.all([use("db"), use("user")]);
+    let uid = null, canWrite = null;
+    if (user) {
+      try { uid = await user.id(); } catch (_) {}
+      try { canWrite = await user.can("data.write"); } catch (_) {}
+    }
+    if (db && uid && canWrite === null) {                 // not told: try one small write in this person's own space
+      try { await db.doc(`data/users/${uid}/app/meta/hello`).set({ v: APP_VERSION, at: Date.now() }); canWrite = true; }
+      catch (e) { if (e && e.code === "invalid_argument") canWrite = false; }
+    }
+    if (db && uid && canWrite !== false) {
+      syncMode = "cloud"; CP = `data/users/${uid}/app/`;
+      const cached = bootCached = store, queued = loadPending();
       store = { ...emptyStore(), prefs: cached.prefs, lastBackup: cached.lastBackup };
       const offline = await bootCloud(db);
       if (offline && !store.dicts.cs.words.length && !store.dicts.en.words.length) { store.dicts = cached.dicts; setTimeout(() => showToast(t("offline")), 1200); }
+      if (queued.length) { applyPendingToStore(queued); flushCloud(); }
       persistLocal();
-      initSample().then(() => { if ($("phdlg").open && !PH.ctl) phInput(); });
-    }
+    } else syncMode = uid ? "view" : "noid";
+    initSample().then(() => { if ($("phdlg").open && !PH.ctl) phInput(); });
   }
   clearTimeout(slow);
   LANG = pickLang(); applyI18n(); applyTheme(); applyPlural();
   if (dev.lastVersion && dev.lastVersion !== APP_VERSION) setTimeout(() => showToast(t("updated_to", APP_VERSION)), 900);
   dev.lastVersion = APP_VERSION; saveDev();
-  await sleep(reduced() ? 0 : Math.max(0, 750 - (Date.now() - t0)));
+  await sleep(reduced() ? 0 : Math.max(0, 700 - (Date.now() - t0)));
+  const spBook = $("splash").querySelector("[data-book]");
+  if (spBook && !reduced()) { spBook.classList.add("open"); await sleep(380); }
   booted = true;
   const h = location.hash.slice(1);
   if (!store.prefs.onboarded) showOnboarding();
   else if (DICTS[h]) openDict(h);
   else if (DICTS[window.VOKAB_DEFAULT]) openDict(window.VOKAB_DEFAULT);
   else showChooser();
-  if (!cloud && store.needsContent && BUILD === "web") loadWordSet(false);
   document.body.classList.add("ready");
   $("splash").classList.add("out");
   setTimeout(() => { $("splash").hidden = true; }, 450);
+  if (BUILD === "web") { setTimeout(checkUpdate, 3000); setInterval(checkUpdate, 30 * 60000); driveBoot(); }
 }
 addEventListener("hashchange", () => { const k = location.hash.slice(1); if (booted && store.prefs.onboarded && DICTS[k] && k !== state.dict) openDict(k); });
 boot();
