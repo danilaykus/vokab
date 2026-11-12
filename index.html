@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Словник</title>
+<meta name="theme-color" content="#f3f4f7" id="meta-theme">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Словник" id="meta-apptitle">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest-uk.json" id="manifest-link">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+/* Vocabulary app — Czech + English. Layout: slim header (dictionary switch, search, views), sticky topic chips,
+   topic cards with bilingual rows (target word | main translation, Ukrainian as a small extra), rule sheets; dialogs; flashcard trainer.
+   Phone: bottom dock with Practice / + Word. Theme: device setting, or a fixed light/dark choice. */
+:root {
+  --bg: #f3f4f7; --surface: #ffffff; --ink: #1a2030; --muted: #5f6879; --faint: #8a92a1; --line: #e3e6ec; --chip: #eceff4;
+  --note: #fff4c4; --note-ink: #3a3214; --note-line: #e9d98f;
+  --m: #1d55b4; --f: #bf2620; --n: #13743b;
+  --accent: #11457e; --on-accent: #ffffff; --warn: #9a5b00; --ok: #17703a; --danger: #b3261e;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1217; --surface: #181c24; --ink: #e8ebf1; --muted: #a2aab8; --faint: #7f8898; --line: #282e39; --chip: #232936;
+    --note: #2a2615; --note-ink: #efe5bf; --note-line: #4a4224;
+    --m: #8bb6ff; --f: #ff978e; --n: #74d597; --accent: #8bb6ff; --on-accent: #10131a; --warn: #f0b35a; --ok: #74d597; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1217; --surface: #181c24; --ink: #e8ebf1; --muted: #a2aab8; --faint: #7f8898; --line: #282e39; --chip: #232936;
+  --note: #2a2615; --note-ink: #efe5bf; --note-line: #4a4224;
+  --m: #8bb6ff; --f: #ff978e; --n: #74d597; --accent: #8bb6ff; --on-accent: #10131a; --warn: #f0b35a; --ok: #74d597; --danger: #ff8a80;
+  color-scheme: dark;
+}
+body[data-dict="en"] { --accent: #4b3bb0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body[data-dict="en"] { --accent: #b9aef5; } }
+:root[data-theme="dark"] body[data-dict="en"] { --accent: #b9aef5; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input, select, textarea { font-size: 16px; }
+
+/* chooser */
+.chooser { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+.ch-inner { width: min(460px, 100%); display: grid; gap: 18px; justify-items: center; text-align: center; }
+.ch-logo { border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+.chooser h1 { margin: 0; font-family: var(--display); font-size: 40px; line-height: 1; }
+.chooser p { margin: 0; color: var(--muted); }
+.ch-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.ch-card { border: 1px solid var(--line); background: var(--surface); border-radius: 18px; padding: 22px 14px; display: grid; gap: 6px; justify-items: center; cursor: pointer; }
+.ch-card b { font-family: var(--display); font-size: 24px; }
+.ch-card small { color: var(--muted); }
+.ch-k { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: #fff; padding: 3px 9px; border-radius: 6px; }
+.ch-card.cz .ch-k { background: #11457e; } .ch-card.en .ch-k { background: #4b3bb0; }
+.ch-card:active { transform: scale(.98); }
+
+/* header */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.top .wrap { padding-block: 12px 10px; display: grid; gap: 10px; }
+.row1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.brand { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 22px; }
+.brand img { border-radius: 7px; }
+.seg { display: inline-flex; background: var(--chip); border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; border-radius: 7px; padding: 5px 12px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.seg button[aria-selected="true"], .seg button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.1); }
+#dictseg button { letter-spacing: .06em; }
+.spacer { flex: 1; }
+.dock { display: flex; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 13px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; min-height: 36px; }
+.btn:hover { background: var(--chip); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.btn.primary:hover { opacity: .92; }
+.btn.sm { padding: 4px 10px; font-size: 13px; min-height: 30px; }
+.btn.icon { padding: 6px 10px; display: inline-grid; place-items: center; }
+.btn.icon svg { width: 18px; height: 18px; }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn.danger { color: var(--danger); }
+.btn:disabled { opacity: .55; cursor: default; }
+.stats { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.search input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+.row3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tabs { display: inline-flex; background: var(--chip); border-radius: 9px; padding: 3px; gap: 2px; }
+.tabs button { border: 0; background: transparent; border-radius: 7px; padding: 5px 10px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tabs small { font-weight: 500; margin-left: 3px; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 1px; }
+.status { padding: 18px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); text-align: center; background: var(--surface); display: grid; gap: 10px; justify-items: center; }
+.viewnote { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* topic chips */
+.groups { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.groups .wrap { padding-block: 7px; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
+.groups .wrap::-webkit-scrollbar { display: none; }
+.groups a { flex: none; text-decoration: none; color: var(--ink); background: var(--chip); padding: 5px 11px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.groups a.rules { background: var(--note); color: var(--note-ink); }
+.groups a small { color: var(--faint); margin-left: 4px; }
+
+/* topics */
+main.wrap { padding-block: 16px 120px; display: grid; gap: 16px; }
+#words { display: grid; gap: 16px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; scroll-margin-top: 56px; overflow: hidden; }
+.ghead { display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; }
+.ghead .gt { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.ghead h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 20px; }
+.ghead .sub { font-size: 13px; color: var(--faint); }
+.ghead .cnt { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.chev { width: 18px; height: 18px; color: var(--faint); transition: transform .15s; flex: none; align-self: center; }
+.group.closed .chev { transform: rotate(-90deg); }
+.group.closed .wl { display: none; }
+.wl { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 430px), 1fr)); column-gap: 30px; padding: 0 14px 4px; }
+
+/* bilingual row */
+.w { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 26px; grid-template-areas: "c1 c2 mo" "c3 c3 c3"; column-gap: 14px; padding: 9px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.c1 { grid-area: c1; min-width: 0; } .c2 { grid-area: c2; min-width: 0; } .c3 { grid-area: c3; min-width: 0; }
+.t1 { font-weight: 700; font-size: 17px; line-height: 1.25; }
+.t2 { font-size: 15.5px; font-weight: 500; line-height: 1.3; }
+.s1, .s2 { font-size: 12.5px; color: var(--muted); line-height: 1.35; margin-top: 1px; }
+.tr { color: var(--faint); }
+.pl { font-size: 10px; font-weight: 700; color: var(--faint); margin-left: 4px; vertical-align: 2px; }
+.c3 { display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: baseline; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.c3:empty { display: none; }
+.uaS::before { content: "UA"; font-size: 9.5px; font-weight: 800; letter-spacing: .06em; color: var(--faint); margin-right: 5px; }
+body.no-ua .uaS { display: none; }
+.nt::before { content: "!"; color: var(--warn); font-weight: 800; margin-right: 4px; }
+.expill { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px; font-size: 11.5px; font-weight: 600; padding: 1px 9px; cursor: pointer; }
+.q { font-size: 10px; font-weight: 700; color: var(--warn); border: 1px dashed var(--warn); border-radius: 4px; padding: 0 4px; margin-left: 5px; vertical-align: 2px; }
+.g-m { color: var(--m); } .g-f { color: var(--f); } .g-n { color: var(--n); }
+.more { grid-area: mo; align-self: start; border: 0; background: transparent; width: 28px; height: 28px; margin: -3px -4px 0 0; border-radius: 7px; cursor: pointer; color: var(--faint); display: grid; place-items: center; padding: 0; }
+.more:hover { background: var(--chip); color: var(--ink); }
+.more svg { width: 16px; height: 16px; }
+body.selecting .w { padding-left: 28px; }
+body.selecting .more, body.selecting .expill { visibility: hidden; }
+.sel { position: absolute; left: 0; top: 11px; width: 18px; height: 18px; accent-color: var(--accent); pointer-events: none; }
+.w.picked { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+/* self-test: the hidden side with its pronunciation, synonyms and notes stays blurred until the row is tapped (tap again to hide) */
+body.hide-m .w:not(.shown) .c2, body.hide-m .w:not(.shown) .c3,
+body.hide-t .w:not(.shown) .c1, body.hide-t .w:not(.shown) .c3 { filter: blur(7px); user-select: none; pointer-events: none; }
+
+/* menu */
+.menu { position: fixed; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 4px; min-width: 200px; display: grid; }
+.menu button { text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.menu button:hover { background: var(--chip); }
+.menu button.danger { color: var(--danger); }
+
+/* rule sheets */
+.sheets-head { display: grid; gap: 4px; scroll-margin-top: 56px; margin-top: 8px; }
+.sheets-head h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+.sheets-head p { margin: 0; color: var(--muted); font-size: 14px; }
+.sheets { columns: 2 24rem; column-gap: 16px; }
+.sheet { break-inside: avoid; background: var(--note); color: var(--note-ink); border: 1px solid var(--note-line); border-radius: 10px; padding: 12px 16px 14px; margin: 0 0 16px; display: grid; gap: 9px; }
+.sheet .sbar { display: flex; justify-content: space-between; align-items: center; }
+.sheet .no { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; opacity: .7; }
+.sheet .x { border: 0; background: transparent; color: var(--note-ink); opacity: .55; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 18px; line-height: 1; }
+.sheet h3 { margin: 0; font-family: var(--display); font-size: 19px; line-height: 1.2; }
+.sheet p { margin: 0; font-size: 14px; }
+.sheet ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.sheet .tw { overflow-x: auto; }
+.sheet table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.sheet th, .sheet td { text-align: left; vertical-align: top; padding: 5px 8px 5px 0; border-top: 1px solid var(--note-line); }
+.sheet th { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; opacity: .75; border-top: 0; }
+.sheet .m { color: var(--m); font-weight: 700; } .sheet .f { color: var(--f); font-weight: 700; } .sheet .n { color: var(--n); font-weight: 700; }
+.fix { color: var(--f); text-decoration: line-through; }
+
+/* floating bars */
+.floatbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--surface); padding: 8px 8px 8px 14px; border-radius: 14px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; align-items: center; z-index: 25; width: max-content; max-width: calc(100vw - 24px); box-shadow: 0 8px 26px rgba(0,0,0,.25); font-size: 14px; }
+.floatbar button { background: transparent; border: 1px solid color-mix(in srgb, var(--surface) 45%, transparent); color: inherit; border-radius: 8px; padding: 6px 11px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.floatbar button:disabled { opacity: .45; cursor: default; }
+.floatbar button.solid { background: var(--surface); color: var(--ink); border-color: var(--surface); }
+#toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; }
+
+/* dialogs */
+dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); padding: 0; width: min(580px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+dialog::backdrop { background: rgba(10, 14, 22, .5); }
+.dbody, dialog form { padding: 18px; display: grid; gap: 12px; }
+.dtop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+dialog h2 { margin: 0; font-family: var(--display); font-size: 22px; }
+.xbtn { border: 0; background: var(--chip); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 18px; line-height: 1; flex: none; }
+.field { display: grid; gap: 4px; }
+.field label, .lbl { font-size: 12px; font-weight: 600; color: var(--muted); }
+.field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--ink); width: 100%; font-family: inherit; }
+.field textarea { resize: vertical; min-height: 70px; }
+.field small, .hint { color: var(--faint); font-size: 12.5px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
+fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+legend { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--accent); padding: 0 6px; }
+.fsets { display: flex; flex-direction: column; gap: 12px; }
+#fs-cz { order: 1; } .fsets .afbar { order: 2; } #fs-en { order: 3; }
+body[data-dict="en"] #fs-cz { order: 3; } body[data-dict="en"] #fs-en { order: 1; }
+.afbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.afbar .hint { flex: 1 1 200px; }
+.afmsg { font-size: 13px; color: var(--muted); }
+.afmsg.err { color: var(--danger); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; }
+.checks label, .opt { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+.formbtns { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.err { color: var(--danger); font-size: 13px; }
+.scope { display: grid; gap: 8px; }
+.glist { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; max-height: 200px; overflow: auto; font-size: 14px; }
+.glist small { color: var(--faint); }
+details.more-f summary { cursor: pointer; font-size: 13px; color: var(--muted); font-weight: 600; padding: 4px 0; }
+details.more-f[open] { display: grid; gap: 10px; }
+.dsec { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.dsec h3 { margin: 0; font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.dsec .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.dsec p { margin: 0; }
+
+/* word detail */
+.dbig { font-family: var(--display); font-size: 32px; font-weight: 700; line-height: 1.1; }
+.dline { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: baseline; font-size: 15px; }
+.dline .k { font-size: 10.5px; font-weight: 800; color: var(--faint); letter-spacing: .05em; }
+.def { font-style: italic; margin: 0; }
+.exs { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.exs li { display: grid; gap: 1px; }
+.exs .c { font-weight: 600; } .exs .u { color: var(--muted); font-size: 14px; }
+
+/* trainer */
+.trainer { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: grid; grid-template-rows: auto 1fr auto; padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.t-top { display: flex; align-items: center; gap: 12px; max-width: 560px; width: 100%; margin: 0 auto; }
+.t-top .ttl { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-top .prog { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pbar { height: 4px; background: var(--line); border-radius: 4px; max-width: 560px; width: 100%; margin: 8px auto 0; overflow: hidden; }
+.pbar i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .2s; }
+.stage { display: grid; place-items: center; min-height: 0; padding-block: 14px; overflow: auto; }
+.card { position: relative; width: min(540px, 100%); min-height: min(360px, 54vh); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.08); display: grid; place-content: center; gap: 10px; text-align: center; padding: 30px 20px; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; transition: transform .25s ease, opacity .25s ease; }
+.card.drag { transition: none; cursor: grabbing; }
+.card .kind { font-size: 12px; color: var(--faint); font-weight: 600; }
+.card .big { font-family: var(--display); font-size: clamp(28px, 7vw, 40px); font-weight: 700; line-height: 1.15; }
+.card .defq { font-size: clamp(17px, 4.2vw, 21px); line-height: 1.45; max-width: 44ch; }
+.card .sub2 { font-size: 15px; color: var(--muted); }
+.card .ans { display: grid; gap: 5px; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 4px; }
+.card .ans .big { font-size: clamp(24px, 6vw, 32px); }
+.card .hint { font-size: 12.5px; color: var(--faint); }
+.stamp { position: absolute; top: 16px; font-weight: 800; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; border: 2px solid; opacity: 0; }
+.stamp.yes { right: 16px; color: var(--ok); } .stamp.no { left: 16px; color: var(--danger); }
+.t-btns { display: flex; gap: 10px; max-width: 560px; width: 100%; margin: 0 auto; }
+.t-btns .btn { flex: 1; padding: 13px; font-size: 16px; border-radius: 14px; }
+.t-btns .no { color: var(--danger); } .t-btns .yes { color: var(--ok); }
+.keys { text-align: center; font-size: 12px; color: var(--faint); margin-top: 8px; }
+.done { width: min(540px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: grid; gap: 12px; }
+.done h2 { margin: 0; font-family: var(--display); font-size: 26px; }
+.done p { margin: 0; }
+.done ul { margin: 0; padding-left: 18px; max-height: 40vh; overflow: auto; display: grid; gap: 3px; }
+.done .row3 { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (hover: hover) { .w .more { opacity: .35; } .w:hover .more, .more[aria-expanded="true"] { opacity: 1; } }
+@media (max-width: 640px) {
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 94%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .dock .btn { flex: 1; min-height: 44px; font-size: 15px; }
+  body.selecting .dock { display: none; }
+  .legend { display: none; }
+  .brand span { display: none; }
+  .wl { padding: 0 12px 4px; }
+  .w { column-gap: 10px; }
+  .t1 { font-size: 16.5px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div class="chooser" id="chooser" hidden>
+  <div class="ch-inner">
+    <img class="ch-logo" src="icon-192.png" alt="" width="76" height="76">
+    <h1 data-i18n="app">Словник</h1>
+    <p data-i18n="choose">Що вчимо?</p>
+    <div class="ch-cards">
+      <button class="ch-card cz" type="button" data-dict="cs"><span class="ch-k">CZ</span><b>Čeština</b><small id="ch-cs"></small></button>
+      <button class="ch-card en" type="button" data-dict="en"><span class="ch-k">EN</span><b>English</b><small id="ch-en"></small></button>
+    </div>
+    <button class="btn" type="button" id="ch-settings" data-i18n="settings">Налаштування</button>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="wrap">
+      <div class="row1">
+        <button class="brand" type="button" id="home" data-i18n-aria="home_aria"><img src="icon-192.png" alt="" width="30" height="30"><span data-i18n="app">Словник</span></button>
+        <div class="seg" id="dictseg" role="tablist" aria-label="CZ / EN">
+          <button type="button" role="tab" id="sw-cs">CZ</button>
+          <button type="button" role="tab" id="sw-en">EN</button>
+        </div>
+        <span class="spacer"></span>
+        <div class="dock" id="dock">
+          <button class="btn primary" type="button" id="practice" data-i18n="practice">Практика</button>
+          <button class="btn" type="button" id="add" data-i18n="add_word">+ Слово</button>
+        </div>
+        <button class="btn icon" type="button" id="settings-btn" data-i18n-aria="settings" data-i18n-title="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <label class="search" for="q"><input id="q" type="search" data-i18n-ph="search" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+      <div class="row3">
+        <div class="tabs" role="tablist">
+          <button role="tab" id="tab-active" aria-selected="true" type="button"><span data-i18n="tab_active">Активні</span><small id="c-active"></small></button>
+          <button role="tab" id="tab-archive" aria-selected="false" type="button"><span data-i18n="tab_archive">Архів</span><small id="c-archive"></small></button>
+          <button role="tab" id="tab-trash" aria-selected="false" type="button"><span data-i18n="tab_trash">Кошик</span><small id="c-trash"></small></button>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn sm" id="selmode" type="button" aria-pressed="false" data-i18n="select">Вибрати</button>
+        <button class="btn sm" id="uamode" type="button" aria-pressed="true" data-i18n-title="ua_title">UA</button>
+        <button class="btn sm" id="hidemode" type="button" data-i18n="hide0">Сховати переклад</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </header>
+
+  <nav class="groups"><div class="wrap" id="nav"></div></nav>
+
+  <main class="wrap">
+    <p class="viewnote" id="viewnote" hidden></p>
+    <div id="words"></div>
+    <div class="status" id="empty" hidden></div>
+    <div class="sheets-head" id="lystochky" hidden>
+      <h2 data-i18n="sheets_h">Листочки з правилами</h2>
+      <p data-i18n="sheets_p"></p>
+    </div>
+    <div class="sheets" id="sheets"></div>
+  </main>
+</div>
+
+<div class="menu" id="menu" hidden role="menu"></div>
+
+<div class="floatbar" id="selbar" hidden>
+  <span id="selcount"></span>
+  <button type="button" class="solid" id="b-practice" data-i18n="practice">Практика</button>
+  <button type="button" id="b-archive" data-i18n="m_archive">В архів</button>
+  <button type="button" id="b-move" data-i18n="move">Перенести</button>
+  <button type="button" id="b-delete" data-i18n="m_delete">Видалити</button>
+  <button type="button" id="b-done" data-i18n-aria="end_select">✕</button>
+</div>
+<div class="floatbar" id="toast" hidden role="status"><span id="toast-text"></span><button type="button" id="toast-undo" data-i18n="undo">Повернути</button></div>
+
+<dialog id="ddlg"><div class="dbody" id="dbody"></div></dialog>
+
+<dialog id="dlg">
+  <form id="wform" method="dialog">
+    <div class="dtop"><h2 id="dlg-title"></h2><button class="xbtn" type="button" data-close data-i18n-aria="close">✕</button></div>
+    <div class="fsets">
+      <fieldset id="fs-cz"><legend>ČEŠTINA</legend>
+        <div class="two">
+          <div class="field"><label for="f-cz" data-i18n="f_cz"></label><input id="f-cz" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+          <div class="field"><label for="f-cztr" data-i18n="f_cztr"></label><input id="f-cztr" autocomplete="off" placeholder="[ржі:м]"></div>
+        </div>
+        <div class="two">
+          <div class="field"><label for="f-g" data-i18n="f_g"></label>
+            <select id="f-g">
+              <option value="m" data-i18n="g_m"></option><option value="f" data-i18n="g_f"></option><option value="n" data-i18n="g_n"></option>
+              <option value="v" data-i18n="pos_v"></option><option value="a" data-i18n="pos_a"></option><option value="d" data-i18n="pos_d"></option><option value="x" data-i18n="pos_x"></option>
+            </select></div>
+          <div class="field"><label for="f-czsyn" data-i18n="f_czsyn"></label><input id="f-czsyn" autocomplete="off" data-i18n-ph="comma"></div>
+        </div>
+      </fieldset>
+      <fieldset id="fs-en"><legend>ENGLISH</legend>
+        <div class="two">
+          <div class="field"><label for="f-en" data-i18n="f_en"></label><input id="f-en" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></div>
+          <div class="field"><label for="f-entr" data-i18n="f_entr"></label><input id="f-entr" autocomplete="off" placeholder="/ruːm/"></div>
+        </div>
+        <div class="field"><label for="f-ensyn" data-i18n="f_ensyn"></label><input id="f-ensyn" autocomplete="off" data-i18n-ph="comma"></div>
+      </fieldset>
+      <div class="afbar">
+        <span class="hint" data-i18n="af_hint"></span>
+        <button class="btn primary sm" type="button" id="af-go" data-i18n="autofill"></button>
+        <span class="afmsg" id="af-msg" hidden></span>
+      </div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="f-ua" data-i18n="f_ua"></label><input id="f-ua" autocomplete="off"></div>
+      <div class="field"><label for="f-group" data-i18n="f_group"></label><select id="f-group"></select></div>
+    </div>
+    <div class="field" id="newgroup-field" hidden><label for="f-newgroup" data-i18n="f_newgroup"></label><input id="f-newgroup" autocomplete="off" data-i18n-ph="f_newgroup_ph"></div>
+    <details class="more-f" id="f-details">
+      <summary data-i18n="f_more"></summary>
+      <div class="field"><label for="f-note" data-i18n="f_note"></label><input id="f-note" autocomplete="off" data-i18n-ph="f_note_ph"></div>
+      <div class="field"><label for="f-def" id="f-def-l"></label><textarea id="f-def" rows="2"></textarea></div>
+      <div class="field"><label for="f-ex" data-i18n="examples"></label><textarea id="f-ex" rows="3" data-i18n-ph="f_ex_ph"></textarea></div>
+    </details>
+    <div class="checks">
+      <label for="f-pl"><input id="f-pl" type="checkbox"> <span data-i18n="only_pl"></span></label>
+      <label for="f-q"><input id="f-q" type="checkbox"> <span data-i18n="f_q"></span></label>
+    </div>
+    <div class="err" id="f-err" hidden></div>
+    <div class="formbtns"><button class="btn" type="button" data-close data-i18n="cancel"></button><button class="btn primary" type="submit" data-i18n="save"></button></div>
+  </form>
+</dialog>
+
+<dialog id="mdlg">
+  <form id="mform" method="dialog">
+    <div class="dtop"><h2 id="m-title"></h2><button class="xbtn" type="button" data-close data-i18n-aria="close">✕</button></div>
+    <div class="field"><label for="m-group" data-i18n="f_group"></label><select id="m-group"></select></div>
+    <div class="field" id="m-new-field" hidden><label for="m-new" data-i18n="f_newgroup"></label><input id="m-new" autocomplete="off"></div>
+    <div class="err" id="m-err" hidden></div>
+    <div class="formbtns"><button class="btn" type="button" data-close data-i18n="cancel"></button><button class="btn primary" type="submit" data-i18n="move"></button></div>
+  </form>
+</dialog>
+
+<dialog id="pdlg">
+  <form id="pform" method="dialog">
+    <div class="dtop"><h2 data-i18n="practice"></h2><button class="xbtn" type="button" data-close data-i18n-aria="close">✕</button></div>
+    <div class="scope">
+      <span class="lbl" data-i18n="p_what"></span>
+      <label class="opt" for="ps-all"><input type="radio" name="ps" id="ps-all" value="all"> <span id="ps-all-l"></span></label>
+      <label class="opt" for="ps-groups"><input type="radio" name="ps" id="ps-groups" value="groups"> <span data-i18n="p_topics"></span></label>
+      <div class="glist" id="ps-glist"></div>
+      <label class="opt" for="ps-sel"><input type="radio" name="ps" id="ps-sel" value="sel"> <span id="ps-sel-l"></span></label>
+    </div>
+    <div class="scope"><span class="lbl" data-i18n="p_mode"></span><div class="scope" id="pmodes"></div></div>
+    <div class="err" id="p-err" hidden></div>
+    <div class="formbtns"><button class="btn" type="button" data-close data-i18n="cancel"></button><button class="btn primary" type="submit" data-i18n="p_start"></button></div>
+  </form>
+</dialog>
+
+<dialog id="setdlg">
+  <div class="dbody">
+    <div class="dtop"><h2 data-i18n="settings"></h2><button class="xbtn" type="button" data-close data-i18n-aria="close">✕</button></div>
+    <div class="dsec">
+      <h3 data-i18n="s_lang"></h3>
+      <div class="seg" id="langseg">
+        <button type="button" data-lang="uk">Українська</button><button type="button" data-lang="en">English</button><button type="button" data-lang="cs">Čeština</button><button type="button" data-lang="ru">Русский</button>
+      </div>
+    </div>
+    <div class="dsec">
+      <h3 data-i18n="s_theme"></h3>
+      <div class="seg" id="themeseg">
+        <button type="button" data-theme-v="auto" data-i18n="th_auto"></button><button type="button" data-theme-v="light" data-i18n="th_light"></button><button type="button" data-theme-v="dark" data-i18n="th_dark"></button>
+      </div>
+    </div>
+    <div class="dsec">
+      <h3 data-i18n="backup_h"></h3>
+      <p class="hint" data-i18n="backup_p"></p>
+      <div class="btns">
+        <button class="btn primary" type="button" id="exp-file" data-i18n="exp_file"></button>
+        <button class="btn" type="button" id="exp-share" data-i18n="exp_share" hidden></button>
+        <button class="btn" type="button" id="exp-copy" data-i18n="exp_copy"></button>
+      </div>
+      <span class="hint" id="lastbackup"></span>
+    </div>
+    <div class="dsec">
+      <h3 data-i18n="import_h"></h3>
+      <p class="hint" data-i18n="import_p"></p>
+      <div class="btns"><label class="btn" for="imp-file" style="display:inline-flex;align-items:center" data-i18n="choose_file"></label><input id="imp-file" type="file" accept=".json,application/json,text/plain" hidden></div>
+      <div class="field"><label for="imp-text" data-i18n="paste_here"></label><textarea id="imp-text" rows="4" placeholder='{"app":"vokab", …}'></textarea></div>
+      <div class="checks">
+        <label for="imp-merge"><input type="radio" name="impmode" id="imp-merge" value="merge" checked> <span data-i18n="imp_merge"></span></label>
+        <label for="imp-replace"><input type="radio" name="impmode" id="imp-replace" value="replace"> <span data-i18n="imp_replace"></span></label>
+      </div>
+      <div class="err" id="imp-err" hidden></div>
+      <div class="btns"><button class="btn primary" type="button" id="imp-go"></button></div>
+    </div>
+    <div class="dsec">
+      <h3 data-i18n="claude_h"></h3>
+      <p class="hint" data-i18n="claude_p"></p>
+      <div class="btns"><button class="btn" type="button" id="prompt-cs" data-i18n="prompt_cs"></button><button class="btn" type="button" id="prompt-en" data-i18n="prompt_en"></button></div>
+    </div>
+    <div class="dsec">
+      <h3 data-i18n="home_h"></h3>
+      <p class="hint" data-i18n="home_p"></p>
+    </div>
+  </div>
+</dialog>
+
+<div class="trainer" id="trainer" hidden>
+  <div>
+    <div class="t-top"><span class="ttl" id="t-title"></span><span class="prog" id="t-prog"></span><button class="btn sm" type="button" id="t-close" data-i18n="close"></button></div>
+    <div class="pbar"><i id="t-bar"></i></div>
+  </div>
+  <div class="stage" id="t-stage"></div>
+  <div id="t-foot">
+    <div class="t-btns"><button class="btn no" type="button" id="t-no" data-i18n="again"></button><button class="btn yes" type="button" id="t-yes" data-i18n="know"></button></div>
+    <div class="keys" data-i18n="keys"></div>
+  </div>
+</div>
+
+<script>window.VOKAB_DEFAULT = "";</script>
+<script>
+/* UI strings: [uk, en, cs, ru] */
+const I18N = {
+  app: ["Словник", "Vocabulary", "Vocab", "Словарь"],
+  choose: ["Що вчимо?", "What are we learning?", "Co se učíme?", "Что учим?"],
+  words_n: ["Слів: {0}", "Words: {0}", "Slov: {0}", "Слов: {0}"],
+  settings: ["Налаштування", "Settings", "Nastavení", "Настройки"],
+  practice: ["Практика", "Practice", "Procvičování", "Практика"],
+  add_word: ["+ Слово", "+ Word", "+ Slovo", "+ Слово"],
+  search: ["Пошук слова", "Search words", "Hledat slovo", "Поиск слова"],
+  tab_active: ["Активні", "Active", "Aktivní", "Активные"],
+  tab_archive: ["Архів", "Archive", "Archiv", "Архив"],
+  tab_trash: ["Кошик", "Trash", "Koš", "Корзина"],
+  select: ["Вибрати", "Select", "Vybrat", "Выбрать"],
+  done: ["Готово", "Done", "Hotovo", "Готово"],
+  hide0: ["Сховати переклад", "Hide translation", "Skrýt překlad", "Скрыть перевод"],
+  hide1: ["Сховати слово", "Hide word", "Skrýt slovo", "Скрыть слово"],
+  hide2: ["Показати все", "Show all", "Zobrazit vše", "Показать всё"],
+  ua_title: ["Показувати українську", "Show Ukrainian", "Zobrazit ukrajinštinu", "Показывать украинский"],
+  home_aria: ["Вибір словника", "Choose dictionary", "Výběr slovníku", "Выбор словаря"],
+  leg_m: ["ч.р.", "masc.", "muž. r.", "м.р."],
+  leg_f: ["ж.р.", "fem.", "žen. r.", "ж.р."],
+  leg_n: ["с.р.", "neut.", "stř. r.", "ср.р."],
+  leg_tr: ["[…] як читати, «:» довгий звук", "[…] how to read it, “:” long sound", "[…] výslovnost, „:“ dlouhá hláska", "[…] как читать, «:» долгий звук"],
+  leg_cz_color: ["Чеський переклад кольоровий:", "Czech translation is coloured:", "Český překlad je barevný:", "Чешский перевод цветной:"],
+  leg_ipa: ["/…/ вимова", "/…/ pronunciation", "/…/ výslovnost", "/…/ произношение"],
+  leg_syn: ["≈ синоніми", "≈ synonyms", "≈ synonyma", "≈ синонимы"],
+  leg_note: ["особливість", "note", "zvláštnost", "особенность"],
+  leg_tap: ["торкнись слова — деталі й приклади", "tap a word for details and examples", "klepni na slovo — detaily a příklady", "нажми на слово — детали и примеры"],
+  dict_cs: ["Чеський словник", "Czech dictionary", "Český slovník", "Чешский словарь"],
+  dict_en: ["Англійський словник", "English dictionary", "Anglický slovník", "Английский словарь"],
+  stats: ["{0} · активних: {1} · тем: {2} · в архіві: {3}", "{0} · active: {1} · topics: {2} · archived: {3}", "{0} · aktivních: {1} · témat: {2} · v archivu: {3}", "{0} · активных: {1} · тем: {2} · в архиве: {3}"],
+  sheets_h: ["Листочки з правилами", "Rule sheets", "Lístečky s pravidly", "Листочки с правилами"],
+  sheets_p: ["Непотрібний листочок прибирай хрестиком — він піде в кошик.", "Remove a sheet you don't need with ×. It goes to the trash.", "Nepotřebný lísteček odstraň křížkem, půjde do koše.", "Ненужный листочек убирай крестиком — он уйдёт в корзину."],
+  sheet_no: ["Листочок {0}", "Sheet {0}", "Lísteček {0}", "Листочек {0}"],
+  sheets_chip: ["Листочки", "Sheets", "Lístečky", "Листочки"],
+  sheet_kind: ["листочок з правилами", "rule sheet", "lísteček s pravidly", "листочек с правилами"],
+  sheet_remove: ["Прибрати листочок", "Remove sheet", "Odstranit lísteček", "Убрать листочек"],
+  vn_archive: ["Архів — слова, які ти вже знаєш або відклав. Повернути можна через «⋯».", "Archive: words you already know or put aside. Bring them back with “⋯”.", "Archiv: slova, která už umíš nebo jsi odložil. Vrátíš je přes „⋯“.", "Архив — слова, которые ты уже знаешь или отложил. Вернуть можно через «⋯»."],
+  vn_trash: ["Кошик — видалене. Повернути або видалити назавжди — через «⋯».", "Trash: deleted items. Restore or delete forever with “⋯”.", "Koš: smazané položky. Obnovit nebo smazat navždy přes „⋯“.", "Корзина — удалённое. Вернуть или удалить навсегда — через «⋯»."],
+  empty_q: ["Нічого не знайдено.", "Nothing found.", "Nic nenalezeno.", "Ничего не найдено."],
+  empty_allarch: ["Усі слова в архіві.", "All words are in the archive.", "Všechna slova jsou v archivu.", "Все слова в архиве."],
+  empty_active: ["Тут поки порожньо. Додай слово кнопкою «+ Слово» або імпортуй файл у налаштуваннях.", "Nothing here yet. Add a word with “+ Word” or import a file in Settings.", "Zatím tu nic není. Přidej slovo tlačítkem „+ Slovo“ nebo importuj soubor v Nastavení.", "Пока пусто. Добавь слово кнопкой «+ Слово» или импортируй файл в настройках."],
+  empty_archive: ["В архіві поки нічого немає.", "The archive is empty.", "Archiv je prázdný.", "В архиве пока ничего нет."],
+  empty_trash: ["Кошик порожній.", "The trash is empty.", "Koš je prázdný.", "Корзина пуста."],
+  open_settings: ["Відкрити налаштування", "Open Settings", "Otevřít nastavení", "Открыть настройки"],
+  pick_all: ["Вибрати всі", "Select all", "Vybrat vše", "Выбрать все"],
+  unpick_all: ["Зняти вибір", "Deselect", "Zrušit výběr", "Снять выбор"],
+  examples: ["Приклади", "Examples", "Příklady", "Примеры"],
+  pl_tag: ["мн.", "pl.", "pomn.", "мн."],
+  unsure: ["Не впевнений у записі", "Not sure about this word", "Nejistý zápis", "Не уверен в записи"],
+  word_actions: ["Дії зі словом", "Word actions", "Akce se slovem", "Действия со словом"],
+  m_detail: ["Деталі й приклади", "Details and examples", "Detaily a příklady", "Детали и примеры"],
+  m_edit: ["Редагувати", "Edit", "Upravit", "Редактировать"],
+  m_clear_note: ["Прибрати особливість", "Remove note", "Odstranit poznámku", "Убрать особенность"],
+  m_archive: ["В архів", "Archive", "Do archivu", "В архив"],
+  m_unarchive: ["Повернути в активні", "Back to active", "Zpět mezi aktivní", "Вернуть в активные"],
+  m_delete: ["Видалити", "Delete", "Smazat", "Удалить"],
+  m_restore: ["Відновити", "Restore", "Obnovit", "Восстановить"],
+  m_purge: ["Видалити назавжди", "Delete forever", "Smazat navždy", "Удалить навсегда"],
+  m_sure: ["Точно? Натисни ще раз", "Sure? Tap again", "Opravdu? Klepni znovu", "Точно? Нажми ещё раз"],
+  m_restore_sheet: ["Повернути листочок", "Restore sheet", "Obnovit lísteček", "Вернуть листочек"],
+  t_note_removed: ["Особливість прибрано", "Note removed", "Poznámka odstraněna", "Особенность убрана"],
+  t_archived: ["«{0}» в архіві", "“{0}” archived", "„{0}“ v archivu", "«{0}» в архиве"],
+  t_unarchived: ["«{0}» знову в активних", "“{0}” is active again", "„{0}“ je znovu aktivní", "«{0}» снова в активных"],
+  t_deleted: ["«{0}» у кошику", "“{0}” moved to trash", "„{0}“ v koši", "«{0}» в корзине"],
+  t_restored: ["«{0}» відновлено", "“{0}” restored", "„{0}“ obnoveno", "«{0}» восстановлено"],
+  t_bulk_arch: ["В архіві: {0}", "Archived: {0}", "Archivováno: {0}", "В архиве: {0}"],
+  t_bulk_unarch: ["Знову в активних: {0}", "Active again: {0}", "Znovu aktivní: {0}", "Снова в активных: {0}"],
+  t_bulk_del: ["У кошику: {0}", "Moved to trash: {0}", "V koši: {0}", "В корзине: {0}"],
+  t_moved: ["Перенесено: {0}", "Moved: {0}", "Přesunuto: {0}", "Перенесено: {0}"],
+  t_sheet_trash: ["Листочок у кошику", "Sheet moved to trash", "Lísteček je v koši", "Листочек в корзине"],
+  undo: ["Повернути", "Undo", "Zpět", "Вернуть"],
+  t_saved: ["Збережено", "Saved", "Uloženo", "Сохранено"],
+  t_added: ["«{0}» додано", "“{0}” added", "„{0}“ přidáno", "«{0}» добавлено"],
+  t_save_fail: ["Не вдалося зберегти: пам’ять браузера заповнена. Зроби резервну копію.", "Couldn't save: browser storage is full. Make a backup.", "Nelze uložit: úložiště prohlížeče je plné. Udělej zálohu.", "Не удалось сохранить: память браузера заполнена. Сделай резервную копию."],
+  selected_n: ["Вибрано: {0}", "Selected: {0}", "Vybráno: {0}", "Выбрано: {0}"],
+  to_active: ["В активні", "To active", "Mezi aktivní", "В активные"],
+  move: ["Перенести", "Move", "Přesunout", "Перенести"],
+  end_select: ["Закінчити вибір", "Finish selecting", "Ukončit výběr", "Закончить выбор"],
+  pos_m: ["іменник", "noun", "podstatné jméno", "существительное"],
+  pos_v: ["дієслово", "verb", "sloveso", "глагол"],
+  pos_a: ["прикметник", "adjective", "přídavné jméno", "прилагательное"],
+  pos_d: ["прислівник", "adverb", "příslovce", "наречие"],
+  pos_x: ["вираз", "phrase", "výraz", "выражение"],
+  only_pl: ["тільки множина", "plural only", "pomnožné", "только множественное число"],
+  in_cs: ["чеською", "in Czech", "česky", "по-чешски"],
+  in_en: ["англійською", "in English", "anglicky", "по-английски"],
+  in_ua: ["українською", "in Ukrainian", "ukrajinsky", "по-украински"],
+  lang_ua: ["Українська", "Ukrainian", "Ukrajinština", "Украинский"],
+  def_h: ["Пояснення {0}", "Explanation {0}", "Vysvětlení {0}", "Объяснение {0}"],
+  close: ["Закрити", "Close", "Zavřít", "Закрыть"],
+  cancel: ["Скасувати", "Cancel", "Zrušit", "Отмена"],
+  save: ["Зберегти", "Save", "Uložit", "Сохранить"],
+  new_word: ["Нове слово", "New word", "Nové slovo", "Новое слово"],
+  edit_word: ["Редагувати слово", "Edit word", "Upravit slovo", "Редактировать слово"],
+  f_cz: ["Слово чеською", "Czech word", "České slovo", "Слово на чешском"],
+  f_cztr: ["Як читати", "How to read it", "Výslovnost", "Как читать"],
+  f_g: ["Рід (колір) / що це", "Gender (colour) / type", "Rod (barva) / druh", "Род (цвет) / что это"],
+  g_m: ["ч.р. — синій", "masculine — blue", "mužský — modrá", "м.р. — синий"],
+  g_f: ["ж.р. — червоний", "feminine — red", "ženský — červená", "ж.р. — красный"],
+  g_n: ["с.р. — зелений", "neuter — green", "střední — zelená", "ср.р. — зелёный"],
+  f_czsyn: ["Синоніми чеською", "Czech synonyms", "Česká synonyma", "Синонимы на чешском"],
+  comma: ["через кому", "separated by commas", "oddělené čárkou", "через запятую"],
+  f_en: ["Слово англійською", "English word", "Anglické slovo", "Слово на английском"],
+  f_entr: ["Вимова (IPA)", "Pronunciation (IPA)", "Výslovnost (IPA)", "Произношение (IPA)"],
+  f_ensyn: ["Синоніми англійською", "English synonyms", "Anglická synonyma", "Синонимы на английском"],
+  f_ua: ["Українською (1–2 слова)", "Ukrainian (1–2 words)", "Ukrajinsky (1–2 slova)", "Украинский (1–2 слова)"],
+  f_group: ["Тема", "Topic", "Téma", "Тема"],
+  new_topic: ["+ Нова тема…", "+ New topic…", "+ Nové téma…", "+ Новая тема…"],
+  f_newgroup: ["Назва нової теми", "New topic name", "Název nového tématu", "Название новой темы"],
+  f_newgroup_ph: ["Наприклад: Погода", "For example: Weather", "Například: Počasí", "Например: Погода"],
+  f_more: ["Особливість, пояснення, приклади", "Note, explanation, examples", "Poznámka, vysvětlení, příklady", "Особенность, объяснение, примеры"],
+  f_note: ["Особливість", "Note", "Zvláštnost", "Особенность"],
+  f_note_ph: ["Тільки якщо є: виняток, не плутати з…, розмовне", "Only if there is one: exception, don't confuse with…, informal", "Jen pokud je: výjimka, neplést s…, hovorové", "Только если есть: исключение, не путать с…, разговорное"],
+  f_ex_ph: ["Речення — переклад (кожне з нового рядка)", "Sentence — translation (one per line)", "Věta — překlad (každá na nový řádek)", "Предложение — перевод (каждое с новой строки)"],
+  f_q: ["не впевнений (?)", "not sure (?)", "nejisté (?)", "не уверен (?)"],
+  err_cz: ["Напиши слово чеською.", "Type the Czech word.", "Napiš české slovo.", "Напиши слово на чешском."],
+  err_en: ["Напиши слово англійською.", "Type the English word.", "Napiš anglické slovo.", "Напиши слово на английском."],
+  err_tr: ["Додай хоча б один переклад.", "Add at least one translation.", "Přidej aspoň jeden překlad.", "Добавь хотя бы один перевод."],
+  err_topic: ["Напиши назву нової теми.", "Type a name for the new topic.", "Napiš název nového tématu.", "Напиши название новой темы."],
+  autofill: ["Заповнити з інтернету", "Fill from the internet", "Doplnit z internetu", "Заполнить из интернета"],
+  af_hint: ["Напиши слово або переклад і натисни — решта підтягнеться з онлайн-словників.", "Type the word or a translation and tap. The rest is filled from online dictionaries.", "Napiš slovo nebo překlad a klepni, zbytek se doplní z online slovníků.", "Напиши слово или перевод и нажми — остальное подтянется из онлайн-словарей."],
+  af_need: ["Спершу напиши слово або переклад.", "Type a word or a translation first.", "Nejdřív napiš slovo nebo překlad.", "Сначала напиши слово или перевод."],
+  af_busy: ["Шукаю…", "Looking up…", "Hledám…", "Ищу…"],
+  af_done: ["Заповнено: {0}. Перевір перед збереженням — автоматичний переклад іноді помиляється.", "Filled: {0}. Check before saving, automatic translation is sometimes wrong.", "Doplněno: {0}. Před uložením zkontroluj, automatický překlad se někdy plete.", "Заполнено: {0}. Проверь перед сохранением — автоматический перевод иногда ошибается."],
+  af_none: ["Нічого не знайшов. Перевір написання.", "Nothing found. Check the spelling.", "Nic nenalezeno. Zkontroluj pravopis.", "Ничего не найдено. Проверь написание."],
+  af_off: ["Не вдалося з’єднатися зі словниками. Перевір інтернет.", "Couldn't reach the dictionaries. Check your internet.", "Nepodařilo se spojit se slovníky. Zkontroluj internet.", "Не удалось связаться со словарями. Проверь интернет."],
+  af_gender: ["рід (вгадано за закінченням — перевір)", "gender (guessed from the ending, check it)", "rod (odhadnut podle koncovky, zkontroluj)", "род (угадан по окончанию — проверь)"],
+  fl_en: ["англійська", "English", "angličtina", "английский"],
+  fl_cz: ["чеська", "Czech", "čeština", "чешский"],
+  fl_ua: ["українська", "Ukrainian", "ukrajinština", "украинский"],
+  fl_ipa: ["вимова", "pronunciation", "výslovnost", "произношение"],
+  fl_syn: ["синоніми", "synonyms", "synonyma", "синонимы"],
+  fl_def: ["пояснення", "explanation", "vysvětlení", "объяснение"],
+  fl_ex: ["приклад", "example", "příklad", "пример"],
+  move_title: ["Перенести {0} у тему", "Move {0} to a topic", "Přesunout {0} do tématu", "Перенести {0} в тему"],
+  p_what: ["Що тренуємо", "What to practise", "Co procvičujeme", "Что тренируем"],
+  p_all_active: ["Усі активні слова ({0})", "All active words ({0})", "Všechna aktivní slova ({0})", "Все активные слова ({0})"],
+  p_all_archive: ["Усі слова з архіву ({0})", "All archived words ({0})", "Všechna slova z archivu ({0})", "Все слова из архива ({0})"],
+  p_topics: ["Вибрані теми", "Chosen topics", "Vybraná témata", "Выбранные темы"],
+  p_sel: ["Вибрані слова ({0})", "Selected words ({0})", "Vybraná slova ({0})", "Выбранные слова ({0})"],
+  p_sel_none: ["Вибрані слова — спершу натисни «Вибрати»", "Selected words: tap “Select” first", "Vybraná slova: nejdřív klepni na „Vybrat“", "Выбранные слова — сначала нажми «Выбрать»"],
+  p_mode: ["Режим", "Mode", "Režim", "Режим"],
+  p_start: ["Почати", "Start", "Začít", "Начать"],
+  p_err_topic: ["Вибери хоча б одну тему.", "Pick at least one topic.", "Vyber aspoň jedno téma.", "Выбери хотя бы одну тему."],
+  p_title_all: ["Усі слова", "All words", "Všechna slova", "Все слова"],
+  p_title_n: ["Тем: {0}", "Topics: {0}", "Témata: {0}", "Тем: {0}"],
+  p_title_sel: ["Вибрані слова", "Selected words", "Vybraná slova", "Выбранные слова"],
+  p_mistakes: ["помилки", "mistakes", "chyby", "ошибки"],
+  mode_mix: ["Мікс: {0}", "Mix: {0}", "Mix: {0}", "Микс: {0}"],
+  mode_def: ["Пояснення {0} → вгадай слово", "Explanation {0} → guess the word", "Vysvětlení {0} → uhodni slovo", "Объяснение {0} → угадай слово"],
+  no_def: ["У цих слів ще немає пояснень.", "These words have no explanations yet.", "Tato slova zatím nemají vysvětlení.", "У этих слов пока нет объяснений."],
+  no_words: ["Тут немає слів для практики.", "No words to practise here.", "Tady nejsou slova k procvičení.", "Здесь нет слов для практики."],
+  again: ["✕ Ще раз", "✕ Again", "✕ Znovu", "✕ Ещё раз"],
+  know: ["✓ Знаю", "✓ I know", "✓ Umím", "✓ Знаю"],
+  stamp_no: ["Ще раз", "Again", "Znovu", "Ещё раз"],
+  stamp_yes: ["Знаю", "Know", "Umím", "Знаю"],
+  keys: ["Торкнись картки — перевернути · тягни вправо — знаю, вліво — ще раз", "Tap the card to flip · swipe right: I know, left: again", "Klepni na kartu — otočit · táhni doprava: umím, doleva: znovu", "Нажми на карточку — перевернуть · тяни вправо — знаю, влево — ещё раз"],
+  card_aria: ["Картка: торкнись, щоб перевернути", "Card: tap to flip", "Karta: klepni pro otočení", "Карточка: нажми, чтобы перевернуть"],
+  say_in: ["Скажи {0}, потім торкнись картки", "Say it {0}, then tap the card", "Řekni to {0}, pak klepni na kartu", "Скажи {0}, потом нажми на карточку"],
+  name_in: ["Назви слово {0}, потім торкнись картки", "Name the word {0}, then tap the card", "Řekni slovo {0}, pak klepni na kartu", "Назови слово {0}, потом нажми на карточку"],
+  what_word: ["що це за слово?", "what's the word?", "co je to za slovo?", "что это за слово?"],
+  done_h: ["Готово!", "Done!", "Hotovo!", "Готово!"],
+  first_try: ["З першого разу: <b>{0} з {1}</b>.", "First try: <b>{0} of {1}</b>.", "Napoprvé: <b>{0} z {1}</b>.", "С первого раза: <b>{0} из {1}</b>."],
+  work_on: ["Над цими ще попрацюй:", "Work on these:", "Na těchto ještě zapracuj:", "Над этими ещё поработай:"],
+  all_first: ["Усі з першого разу. Так тримати!", "All on the first try. Keep it up!", "Vše napoprvé. Jen tak dál!", "Все с первого раза. Так держать!"],
+  repeat_mistakes: ["Повторити помилки ({0})", "Repeat mistakes ({0})", "Zopakovat chyby ({0})", "Повторить ошибки ({0})"],
+  again_all: ["Ще раз усе", "All again", "Znovu vše", "Ещё раз всё"],
+  s_lang: ["Мова інтерфейсу", "Interface language", "Jazyk rozhraní", "Язык интерфейса"],
+  s_theme: ["Оформлення", "Appearance", "Vzhled", "Оформление"],
+  th_auto: ["Як на пристрої", "Like my device", "Podle zařízení", "Как на устройстве"],
+  th_light: ["Світла", "Light", "Světlý", "Светлая"],
+  th_dark: ["Темна", "Dark", "Tmavý", "Тёмная"],
+  backup_h: ["Резервна копія", "Backup", "Záloha", "Резервная копия"],
+  backup_p: ["Файл з усіма словами обох словників: активні, архів, кошик і листочки. Збережи його у «Файли» або перешли собі — і відкрий на іншому пристрої через «Імпорт».", "One file with all words from both dictionaries: active, archive, trash and sheets. Save it to Files or send it to yourself, then open it on another device with Import.", "Jeden soubor se všemi slovy z obou slovníků: aktivní, archiv, koš i lístečky. Ulož ho do Souborů nebo si ho pošli a na jiném zařízení ho otevři přes Import.", "Файл со всеми словами обоих словарей: активные, архив, корзина и листочки. Сохрани его в «Файлы» или перешли себе — и открой на другом устройстве через «Импорт»."],
+  exp_file: ["Завантажити файл", "Download file", "Stáhnout soubor", "Скачать файл"],
+  exp_share: ["Поділитися файлом", "Share file", "Sdílet soubor", "Поделиться файлом"],
+  exp_copy: ["Скопіювати як текст", "Copy as text", "Kopírovat jako text", "Скопировать как текст"],
+  last_backup: ["Остання копія: {0}", "Last backup: {0}", "Poslední záloha: {0}", "Последняя копия: {0}"],
+  no_backup: ["Резервної копії ще не було.", "No backup yet.", "Zatím žádná záloha.", "Резервной копии ещё не было."],
+  import_h: ["Імпорт", "Import", "Import", "Импорт"],
+  import_p: ["Обери файл або встав текст, який дав Claude.", "Choose a file or paste the text Claude gave you.", "Vyber soubor nebo vlož text od Clauda.", "Выбери файл или вставь текст от Claude."],
+  choose_file: ["Обрати файл", "Choose file", "Vybrat soubor", "Выбрать файл"],
+  paste_here: ["Або встав сюди", "Or paste here", "Nebo vlož sem", "Или вставь сюда"],
+  imp_merge: ["Додати до моїх слів", "Add to my words", "Přidat k mým slovům", "Добавить к моим словам"],
+  imp_replace: ["Замінити все", "Replace everything", "Nahradit vše", "Заменить всё"],
+  imp_go: ["Імпортувати", "Import", "Importovat", "Импортировать"],
+  imp_sure: ["Точно? Усе поточне зникне", "Sure? Everything current will be lost", "Opravdu? Vše současné zmizí", "Точно? Всё текущее исчезнет"],
+  imp_bad: ["Не бачу тут даних. Встав увесь текст від Claude або обери файл резервної копії.", "No data found here. Paste all of Claude's text or choose a backup file.", "Nevidím tu data. Vlož celý text od Clauda nebo vyber soubor zálohy.", "Не вижу здесь данных. Вставь весь текст от Claude или выбери файл резервной копии."],
+  imp_nowords: ["У тексті немає слів. Перевір, що вставив усе.", "There are no words in the text. Check you pasted all of it.", "V textu nejsou slova. Zkontroluj, že jsi vložil všechno.", "В тексте нет слов. Проверь, что вставил всё."],
+  imp_replaced: ["Дані замінено", "Data replaced", "Data nahrazena", "Данные заменены"],
+  imp_added: ["Додано слів: {0}", "Words added: {0}", "Přidáno slov: {0}", "Добавлено слов: {0}"],
+  imp_updated: ["оновлено: {0}", "updated: {0}", "aktualizováno: {0}", "обновлено: {0}"],
+  imp_topics: ["нових тем: {0}", "new topics: {0}", "nových témat: {0}", "новых тем: {0}"],
+  copied_backup: ["Скопійовано. Встав текст на іншому пристрої в «Імпорт».", "Copied. Paste it into Import on the other device.", "Zkopírováno. Vlož text na jiném zařízení do Importu.", "Скопировано. Вставь текст на другом устройстве в «Импорт»."],
+  copy_fail: ["Не вдалося скопіювати.", "Couldn't copy.", "Nepodařilo se zkopírovat.", "Не удалось скопировать."],
+  share_fail: ["Не вдалося поділитися. Спробуй «Завантажити файл».", "Couldn't share. Try “Download file”.", "Sdílení se nepovedlo. Zkus „Stáhnout soubor“.", "Не удалось поделиться. Попробуй «Скачать файл»."],
+  claude_h: ["Нові слова через Claude", "New words via Claude", "Nová slova přes Clauda", "Новые слова через Claude"],
+  claude_p: ["Скопіюй інструкцію і встав у чат з Claude разом з фото, голосовим або списком слів. Claude поверне готовий текст — встав його вище в «Імпорт».", "Copy the instructions and paste them into a chat with Claude together with a photo, voice note or word list. Claude returns ready text: paste it into Import above.", "Zkopíruj návod a vlož ho do chatu s Claudem spolu s fotkou, hlasovkou nebo seznamem slov. Claude vrátí hotový text, vlož ho výše do Importu.", "Скопируй инструкцию и вставь в чат с Claude вместе с фото, голосовым или списком слов. Claude вернёт готовый текст — вставь его выше в «Импорт»."],
+  prompt_cs: ["Інструкція: чеські слова", "Instructions: Czech words", "Návod: česká slova", "Инструкция: чешские слова"],
+  prompt_en: ["Інструкція: англійські слова", "Instructions: English words", "Návod: anglická slova", "Инструкция: английские слова"],
+  prompt_copied: ["Інструкцію скопійовано — встав її в чат з Claude", "Instructions copied. Paste them into a chat with Claude", "Návod zkopírován, vlož ho do chatu s Claudem", "Инструкция скопирована — вставь её в чат с Claude"],
+  home_h: ["На екран «Додому»", "Add to Home Screen", "Na plochu", "На экран «Домой»"],
+  home_p: ["iPhone: Safari → «Поділитися» → «На початковий екран». Для двох іконок відкрий окремо cs.html (чеська) і en.html (англійська). Слова зберігаються на цьому пристрої — роби резервну копію хоча б раз на тиждень.", "iPhone: Safari → Share → Add to Home Screen. For two icons, open cs.html (Czech) and en.html (English) separately. Words are stored on this device, so make a backup at least once a week.", "iPhone: Safari → Sdílet → Přidat na plochu. Pro dvě ikony otevři zvlášť cs.html (čeština) a en.html (angličtina). Slova se ukládají v tomto zařízení, zálohuj aspoň jednou týdně.", "iPhone: Safari → «Поделиться» → «На экран „Домой“». Для двух иконок открой отдельно cs.html (чешский) и en.html (английский). Слова хранятся на этом устройстве — делай резервную копию хотя бы раз в неделю."]
+};
+
+</script>
+<script>
+"use strict";
+/* ================= i18n ================= */
+const LANGS = ["uk", "en", "cs", "ru"];
+const LOCALES = { uk: "uk-UA", en: "en-GB", cs: "cs-CZ", ru: "ru-RU" };
+let LANG = "uk";
+function t(k, ...a) {
+  const row = I18N[k];
+  if (!row) { console.error("i18n missing: " + k); return k; }
+  let s = row[LANGS.indexOf(LANG)] ?? row[0];
+  a.forEach((v, i) => { s = s.split("{" + i + "}").join(v); });
+  return s;
+}
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  $("meta-apptitle").content = t("app") + (window.VOKAB_DEFAULT === "cs" ? " CZ" : window.VOKAB_DEFAULT === "en" ? " EN" : "");
+  $("manifest-link").href = `manifest-${window.VOKAB_DEFAULT ? window.VOKAB_DEFAULT + "-" : ""}${LANG}.json`;
+  document.querySelectorAll("#langseg [data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === LANG)));
+}
+
+/* ================= config ================= */
+const KEY = "vokab:v1";
+const DICTS = { cs: { T: "cz", M: "en", tName: "čeština", mName: "English", inT: "in_cs", inM: "in_en" },
+                en: { T: "en", M: "cz", tName: "English", mName: "čeština", inT: "in_en", inM: "in_cs" } };
+const POS = g => t({ m: "pos_m", f: "pos_m", n: "pos_m", v: "pos_v", a: "pos_a", d: "pos_d", x: "pos_x" }[g] || "pos_x");
+const ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
+const ICON_CHEV = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+function modeLabel(k) {
+  const d = DICTS[state.dict];
+  return { mt: `${d.mName} → ${d.tName}`, tm: `${d.tName} → ${d.mName}`, mix: t("mode_mix", `${d.mName} ↔ ${d.tName}`), ut: `${t("lang_ua")} → ${d.tName}`, def: t("mode_def", t(d.inT)) }[k];
+}
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fold = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const arr = v => Array.isArray(v) ? v.filter(Boolean).map(String) : (typeof v === "string" && v ? v.split(",").map(s => s.trim()).filter(Boolean) : []);
+const uaShort = s => { const x = String(s || "").split(/[;,(]/)[0].trim(); return x || String(s || ""); };
+const inline = s => esc(s)
+  .replace(/\[([mfn]):([^\]]+)\]/g, '<span class="$1">$2</span>')
+  .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+  .replace(/~~(.+?)~~/g, '<span class="fix">$1</span>')
+  .replace(/_([^_]+)_/g, "<i>$1</i>");
+const gc = w => (w.g === "m" || w.g === "f" || w.g === "n") ? "g-" + w.g : "";
+
+/* ================= storage ================= */
+function emptyStore() { return { v: 1, dicts: { cs: { groups: [], sheets: [] }, en: { groups: [], sheets: [] } }, prefs: { cs: {}, en: {}, ua: true, theme: "auto", lang: null }, lastBackup: null }; }
+function normWord(w) {
+  const o = {
+    id: String(w.id || newId("w")), cz: String(w.cz || ""), czTr: String(w.czTr ?? w.tr ?? ""), czSyn: arr(w.czSyn ?? w.syn),
+    g: ["m", "f", "n", "v", "a", "d", "x"].includes(w.g) ? w.g : "x",
+    en: String(w.en || ""), enTr: String(w.enTr || ""), enSyn: arr(w.enSyn),
+    ua: String(w.ua || ""), note: String(w.note || ""), def: String(w.def || ""),
+    ex: (Array.isArray(w.ex) ? w.ex : []).map(e => typeof e === "string" ? { t: e, ua: "" } : { t: String(e.t ?? e.cz ?? e.en ?? ""), ua: String(e.ua || "") }).filter(e => e.t)
+  };
+  for (const k of ["pl", "q", "archived", "deleted"]) if (w[k]) o[k] = true;
+  if (w.deletedAt) o.deletedAt = w.deletedAt;
+  return o;
+}
+function normDict(d) {
+  d = d || {};
+  return {
+    groups: (d.groups || []).map((g, i) => ({ id: String(g.id || newId("t")), name: String(g.name || g.ua || "—"), sub: String(g.sub || g.cz || ""),
+      order: Number.isFinite(g.order) ? g.order : (i + 1) * 10, words: (g.words || []).map(normWord) })),
+    sheets: (d.sheets || []).map((s, i) => ({ ...s, id: String(s.id || newId("s")), order: Number.isFinite(s.order) ? s.order : (i + 1) * 10 }))
+  };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return emptyStore();
+    const s = JSON.parse(raw), base = emptyStore();
+    return { ...base, ...s, dicts: { cs: normDict(s.dicts?.cs), en: normDict(s.dicts?.en) }, prefs: { ...base.prefs, ...(s.prefs || {}) } };
+  } catch (_) { return emptyStore(); }
+}
+let store = load();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (_) { showToast(t("t_save_fail")); } }
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
+
+/* ================= theme & language ================= */
+function applyTheme() {
+  const th = store.prefs.theme || "auto";
+  if (th === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
+  const dark = th === "dark" || (th === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  $("meta-theme").content = dark ? "#181c24" : "#ffffff";
+  document.querySelectorAll("#themeseg [data-theme-v]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.themeV === th)));
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", applyTheme);
+function pickLang() {
+  if (LANGS.includes(store.prefs.lang)) return store.prefs.lang;
+  const n = (navigator.language || "uk").slice(0, 2).toLowerCase();
+  return LANGS.includes(n) ? n : "uk";
+}
+function setLang(l) {
+  LANG = l; store.prefs.lang = l; save(); applyI18n();
+  if (state.dict) { refreshChrome(); render(); } else showChooser();
+}
+
+/* ================= state ================= */
+const state = { dict: null, view: "active", selecting: false, selected: new Set(), hide: 0, editing: null };
+const D = () => DICTS[state.dict];
+const data = () => store.dicts[state.dict];
+const pref = () => (store.prefs[state.dict] = store.prefs[state.dict] || {});
+const tW = w => w[D().T] || "", tTr = w => w[D().T + "Tr"] || "", tSyn = w => w[D().T + "Syn"] || [];
+const mW = w => w[D().M] || "", mTr = w => w[D().M + "Tr"] || "", mSyn = w => w[D().M + "Syn"] || [];
+const tCls = w => D().T === "cz" ? gc(w) : "", mCls = w => D().M === "cz" ? gc(w) : "";
+const inView = (w, v) => v === "active" ? !w.deleted && !w.archived : v === "archive" ? !w.deleted && !!w.archived : !!w.deleted;
+const groupsSorted = () => data().groups.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+const sheetsSorted = () => data().sheets.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+const findGroup = id => data().groups.find(g => g.id === id);
+const findWord = (gid, wid) => (findGroup(gid)?.words || []).find(x => x.id === wid);
+const key = (gid, wid) => gid + "|" + wid;
+function wordsIn(view, ids) {
+  const out = [];
+  for (const g of groupsSorted()) { if (ids && !ids.includes(g.id)) continue; for (const w of g.words) if (inView(w, view)) out.push({ g, w }); }
+  return out;
+}
+const countActive = k => store.dicts[k].groups.reduce((n, g) => n + g.words.filter(w => !w.deleted && !w.archived).length, 0);
+
+/* ================= routing ================= */
+function showChooser() {
+  if (state.selecting) toggleSelect(false);
+  state.dict = null; delete document.body.dataset.dict;
+  $("app").hidden = true; $("chooser").hidden = false;
+  $("ch-cs").textContent = t("words_n", countActive("cs")); $("ch-en").textContent = t("words_n", countActive("en"));
+  document.title = t("app");
+}
+function refreshChrome() {
+  const k = state.dict;
+  $("legend").innerHTML = (k === "cs"
+    ? `<span><i class="dot" style="background:var(--m)"></i>${esc(t("leg_m"))}</span><span><i class="dot" style="background:var(--f)"></i>${esc(t("leg_f"))}</span><span><i class="dot" style="background:var(--n)"></i>${esc(t("leg_n"))}</span><span>${esc(t("leg_tr"))}</span>`
+    : `<span>${esc(t("leg_cz_color"))} <b class="g-m">${esc(t("leg_m"))}</b> · <b class="g-f">${esc(t("leg_f"))}</b> · <b class="g-n">${esc(t("leg_n"))}</b></span><span>${esc(t("leg_ipa"))}</span>`) +
+    `<span>${esc(t("leg_syn"))}</span><span><b style="color:var(--warn)">!</b> ${esc(t("leg_note"))}</span><span>${esc(t("leg_tap"))}</span>`;
+  $("hidemode").textContent = t("hide" + state.hide);
+  $("selmode").textContent = state.selecting ? t("done") : t("select");
+  document.title = `${t("app")} · ${D().tName}`;
+}
+function openDict(k) {
+  if (!DICTS[k]) return showChooser();
+  if (state.selecting) toggleSelect(false);
+  state.dict = k; state.view = "active"; state.hide = 0;
+  document.body.dataset.dict = k;
+  document.body.classList.remove("hide-m", "hide-t");
+  $("chooser").hidden = true; $("app").hidden = false;
+  ["cs", "en"].forEach(x => $("sw-" + x).setAttribute("aria-selected", String(x === k)));
+  ["active", "archive", "trash"].forEach(x => $("tab-" + x).setAttribute("aria-selected", String(x === "active")));
+  $("selmode").hidden = false; $("q").value = ""; $("hidemode").setAttribute("aria-pressed", "false");
+  if (location.hash !== "#" + k) history.replaceState(null, "", "#" + k);
+  refreshChrome(); render(); scrollTo({ top: 0 });
+}
+$("chooser").addEventListener("click", e => { const b = e.target.closest("[data-dict]"); if (b) openDict(b.dataset.dict); });
+$("home").addEventListener("click", showChooser);
+$("sw-cs").addEventListener("click", () => openDict("cs"));
+$("sw-en").addEventListener("click", () => openDict("en"));
+
+/* ================= render ================= */
+function rowHTML(g, w) {
+  const tt = tTr(w), ts = tSyn(w), mt = mTr(w), ms = mSyn(w);
+  const s1 = [tt ? `<span class="tr">${esc(tt)}</span>` : "", ts.length ? `<span>≈ ${esc(ts.join(", "))}</span>` : ""].filter(Boolean).join(" · ");
+  const s2 = [mt ? `<span class="tr">${esc(mt)}</span>` : "", ms.length ? `<span>≈ ${esc(ms.join(", "))}</span>` : ""].filter(Boolean).join(" · ");
+  const c3 = (w.ua ? `<span class="uaS">${esc(uaShort(w.ua))}</span>` : "") + (w.note ? `<span class="nt">${esc(w.note)}</span>` : "") +
+    (w.ex && w.ex.length ? `<button class="expill" type="button" data-act="detail">${esc(t("examples"))}</button>` : "");
+  const picked = state.selected.has(key(g.id, w.id));
+  return `<div class="w${picked ? " picked" : ""}" data-g="${esc(g.id)}" data-w="${esc(w.id)}">` +
+    (state.selecting ? `<input class="sel" type="checkbox" tabindex="-1" aria-hidden="true"${picked ? " checked" : ""}>` : "") +
+    `<div class="c1"><div class="t1 ${tCls(w)}">${esc(tW(w) || "—")}${w.pl ? `<span class="pl">${esc(t("pl_tag"))}</span>` : ""}${w.q ? `<span class="q" title="${esc(t("unsure"))}">?</span>` : ""}</div>${s1 ? `<div class="s1">${s1}</div>` : ""}</div>` +
+    `<div class="c2"><div class="t2 ${mCls(w)}">${esc(mW(w) || uaShort(w.ua))}</div>${s2 ? `<div class="s2">${s2}</div>` : ""}</div>` +
+    `<button class="more" type="button" data-act="menu" aria-label="${esc(t("word_actions"))}" aria-haspopup="menu">${ICON_MORE}</button>` +
+    `<div class="c3">${c3}</div></div>`;
+}
+function sheetHTML(s, no) {
+  let h = `<section class="sheet" data-s="${esc(s.id)}"><div class="sbar"><span class="no">${esc(t("sheet_no", no))}</span><button class="x" type="button" data-act="del-sheet" aria-label="${esc(t("sheet_remove"))}">×</button></div><h3>${inline(s.title || "")}</h3>`;
+  for (const b of (s.blocks || [])) {
+    if (b.t === "p") h += `<p>${inline(b.x)}</p>`;
+    else if (b.t === "ul") h += `<ul>${(b.items || []).map(i => `<li>${inline(i)}</li>`).join("")}</ul>`;
+    else if (b.t === "table") h += `<div class="tw"><table><tr>${(b.head || []).map(c => `<th>${inline(c)}</th>`).join("")}</tr>` + (b.rows || []).map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("") + `</table></div>`;
+  }
+  return h + `</section>`;
+}
+function render() {
+  if (!state.dict) return;
+  const v = state.view, q = fold($("q").value);
+  const counts = { active: 0, archive: 0, trash: 0 };
+  for (const g of data().groups) for (const w of g.words) { if (w.deleted) counts.trash++; else if (w.archived) counts.archive++; else counts.active++; }
+  const trashSheets = sheetsSorted().filter(s => s.deleted);
+  counts.trash += trashSheets.length;
+  ["active", "archive", "trash"].forEach(x => $("c-" + x).textContent = counts[x] || "");
+  const collapsed = new Set(pref().collapsed || []);
+  let html = "", nav = "", shownAny = false;
+  for (const g of groupsSorted()) {
+    const live = g.words.filter(w => inView(w, v));
+    if (!live.length) continue;
+    nav += `<a href="#" data-goto="${esc(g.id)}">${esc(g.name)}<small>${live.length}</small></a>`;
+    const shown = q ? live.filter(w => fold([w.cz, w.en, w.ua, w.note, ...(w.czSyn || []), ...(w.enSyn || [])].join(" ")).includes(q)) : live;
+    if (!shown.length) continue;
+    shownAny = true;
+    const closed = collapsed.has(g.id) && !q;
+    const allPicked = state.selecting && shown.every(w => state.selected.has(key(g.id, w.id)));
+    const gbtn = state.selecting ? `<button class="btn sm" type="button" data-act="pick-group">${esc(t(allPicked ? "unpick_all" : "pick_all"))}</button>`
+      : (v !== "trash" ? `<button class="btn sm" type="button" data-act="practice-group">${esc(t("practice"))}</button>` : "");
+    html += `<section class="group${closed ? " closed" : ""}" id="g-${esc(g.id)}"><div class="ghead"><button class="gt" type="button" data-act="toggle" aria-expanded="${!closed}">${ICON_CHEV}<h2>${esc(g.name)}</h2>${g.sub ? `<span class="sub">${esc(g.sub)}</span>` : ""}<span class="cnt">${live.length}</span></button>${gbtn}</div>` +
+      `<div class="wl">${shown.map(w => rowHTML(g, w)).join("")}</div></section>`;
+  }
+  const liveSheets = sheetsSorted().filter(s => !s.deleted);
+  const showSheets = v === "active" && !q && liveSheets.length > 0;
+  if (showSheets) nav += `<a class="rules" href="#" data-goto="__sheets">${esc(t("sheets_chip"))}</a>`;
+  if (v === "trash" && trashSheets.length) {
+    shownAny = true;
+    html += `<section class="group"><div class="ghead"><div class="gt"><h2>${esc(t("sheets_chip"))}</h2><span class="cnt">${trashSheets.length}</span></div></div><div class="wl">` +
+      trashSheets.map(s => `<div class="w" data-s="${esc(s.id)}"><div class="c1"><div class="t1">${esc(s.title)}</div></div><div class="c2"><div class="t2">${esc(t("sheet_kind"))}</div></div><button class="more" type="button" data-act="menu" aria-label="${esc(t("word_actions"))}">${ICON_MORE}</button><div class="c3"></div></div>`).join("") + `</div></section>`;
+  }
+  $("nav").innerHTML = nav; $("nav").closest(".groups").hidden = !nav;
+  $("words").innerHTML = html;
+  $("lystochky").hidden = !showSheets;
+  $("sheets").innerHTML = showSheets ? liveSheets.map((s, i) => sheetHTML(s, i + 1)).join("") : "";
+  const vn = { active: "", archive: t("vn_archive"), trash: t("vn_trash") }[v];
+  $("viewnote").hidden = !vn; $("viewnote").textContent = vn;
+  let empty = "";
+  if (q && !shownAny) empty = t("empty_q");
+  else if (!shownAny) empty = { active: counts.archive ? t("empty_allarch") : t("empty_active"), archive: t("empty_archive"), trash: t("empty_trash") }[v];
+  $("empty").hidden = !empty;
+  $("empty").innerHTML = esc(empty) + (v === "active" && !shownAny && !q ? `<button class="btn" type="button" data-open-settings>${esc(t("open_settings"))}</button>` : "");
+  const ng = groupsSorted().filter(g => g.words.some(w => inView(w, "active"))).length;
+  $("stats").textContent = t("stats", t("dict_" + state.dict), counts.active, ng, counts.archive);
+  updateSelBar();
+}
+$("empty").addEventListener("click", e => { if (e.target.closest("[data-open-settings]")) openSettings(); });
+$("nav").addEventListener("click", e => {
+  const a = e.target.closest("[data-goto]"); if (!a) return; e.preventDefault();
+  const el = a.dataset.goto === "__sheets" ? $("lystochky") : $("g-" + a.dataset.goto);
+  if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+
+/* ================= mutations ================= */
+function commit() { save(); render(); }
+function mutateWords(gid, fn) { const g = findGroup(gid); if (!g) return; g.words = fn(g.words.slice()); commit(); }
+const patchWord = (gid, wid, fn) => mutateWords(gid, ws => ws.map(w => w.id === wid ? fn({ ...w }) : w));
+const strip = (o, ...ks) => { ks.forEach(k => delete o[k]); return o; };
+function bulk(keys, fn) {
+  const byG = {};
+  for (const k of keys) { const [gid, wid] = k.split("|"); (byG[gid] = byG[gid] || new Set()).add(wid); }
+  for (const gid of Object.keys(byG)) { const g = findGroup(gid); if (g) g.words = fn(g.words.slice(), byG[gid]); }
+  commit();
+}
+function setSheet(sid, patch) { const s = data().sheets.find(x => x.id === sid); if (!s) return; Object.assign(s, patch); if (patch.deleted === false) delete s.deleted; commit(); }
+function newGroup(name) { const g = { id: newId("t"), name, sub: "", order: Math.max(0, ...data().groups.map(x => x.order || 0)) + 10, words: [] }; data().groups.push(g); return g; }
+
+let toastTimer = null, toastUndo = null;
+function showToast(text, undo) {
+  $("toast-text").textContent = text; toastUndo = undo || null; $("toast-undo").hidden = !undo; $("toast").hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; toastUndo = null; }, 6000);
+}
+$("toast-undo").addEventListener("click", () => { const u = toastUndo; $("toast").hidden = true; toastUndo = null; if (u) u(); });
+document.querySelectorAll("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-close]")) d.close(); }));
+
+/* ================= detail ================= */
+function openDetail(gid, wid) {
+  const g = findGroup(gid), w = findWord(gid, wid); if (!g || !w) return;
+  const czLine = `<div class="dline"><span class="k">CZ</span><span><b class="${gc(w)}">${esc(w.cz)}</b>${w.czTr ? ` <span class="tr">${esc(w.czTr)}</span>` : ""}${w.czSyn.length ? ` · ≈ ${esc(w.czSyn.join(", "))}` : ""}</span></div>`;
+  const enLine = w.en ? `<div class="dline"><span class="k">EN</span><span><b>${esc(w.en)}</b>${w.enTr ? ` <span class="tr">${esc(w.enTr)}</span>` : ""}${w.enSyn.length ? ` · ≈ ${esc(w.enSyn.join(", "))}` : ""}</span></div>` : "";
+  let h = `<div class="dtop"><span class="lbl">${esc(g.name)} · ${esc(POS(w.g))}${w.pl ? " · " + esc(t("only_pl")) : ""}</span><button class="xbtn" type="button" data-close aria-label="${esc(t("close"))}">✕</button></div>` +
+    `<div><div class="dbig ${tCls(w)}">${esc(tW(w))}</div>${tTr(w) ? `<div class="tr">${esc(tTr(w))}</div>` : ""}</div>` +
+    (D().T === "cz" ? enLine + czLine : czLine + enLine) +
+    (w.ua ? `<div class="dline"><span class="k">UA</span><span>${esc(w.ua)}</span></div>` : "") +
+    (w.note ? `<div class="dline"><span class="k" style="color:var(--warn)">!</span><span>${esc(w.note)}</span></div>` : "");
+  if (w.def) h += `<div class="dsec"><h3>${esc(t("def_h", t(D().inT)))}</h3><p class="def">${esc(w.def)}</p></div>`;
+  if (w.ex.length) h += `<div class="dsec"><h3>${esc(t("examples"))}</h3><ul class="exs">${w.ex.map(e => `<li><span class="c">${esc(e.t)}</span>${e.ua ? `<span class="u">${esc(e.ua)}</span>` : ""}</li>`).join("")}</ul></div>`;
+  h += `<div class="formbtns"><button class="btn" type="button" id="d-edit">${esc(t("m_edit"))}</button><button class="btn primary" type="button" data-close>${esc(t("close"))}</button></div>`;
+  $("dbody").innerHTML = h;
+  $("d-edit").onclick = () => { $("ddlg").close(); openForm(gid, w); };
+  $("ddlg").showModal();
+}
+
+/* ================= item menu ================= */
+const menu = $("menu"); let menuFor = null;
+function closeMenu() { menu.hidden = true; if (menuFor) menuFor.btn.setAttribute("aria-expanded", "false"); menuFor = null; }
+function openMenu(btn, item) {
+  closeMenu();
+  let items = [];
+  if (item.dataset.s) items = [["restore-sheet", "m_restore_sheet"], ["purge-sheet", "m_purge", "danger"]];
+  else {
+    const w = findWord(item.dataset.g, item.dataset.w); if (!w) return;
+    if (state.view === "trash") items = [["restore", "m_restore"], ["purge", "m_purge", "danger"]];
+    else {
+      items.push(["detail", "m_detail"], ["edit", "m_edit"]);
+      if (w.note) items.push(["clear-note", "m_clear_note"]);
+      items.push(state.view === "archive" ? ["unarchive", "m_unarchive"] : ["archive", "m_archive"]);
+      items.push(["delete", "m_delete", "danger"]);
+    }
+  }
+  menu.innerHTML = items.map(([a, k, c]) => `<button type="button" role="menuitem" data-mact="${a}"${c ? ` class="${c}"` : ""}>${esc(t(k))}</button>`).join("");
+  menu.hidden = false;
+  const r = btn.getBoundingClientRect(), mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + "px";
+  menu.style.top = (r.bottom + 4 + mh > innerHeight - 8 ? Math.max(8, r.top - mh - 4) : r.bottom + 4) + "px";
+  btn.setAttribute("aria-expanded", "true"); menuFor = { btn, item };
+}
+document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('[data-act="menu"]')) closeMenu(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !menu.hidden) closeMenu(); });
+addEventListener("scroll", () => { if (!menu.hidden) closeMenu(); }, { passive: true });
+menu.addEventListener("click", e => {
+  const b = e.target.closest("[data-mact]"); if (!b || !menuFor) return;
+  const { item } = menuFor, act = b.dataset.mact;
+  if ((act === "purge" || act === "purge-sheet") && b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = t("m_sure"); return; }
+  closeMenu();
+  if (item.dataset.s) {
+    const sid = item.dataset.s;
+    if (act === "restore-sheet") setSheet(sid, { deleted: false });
+    if (act === "purge-sheet") { data().sheets = data().sheets.filter(s => s.id !== sid); commit(); }
+    return;
+  }
+  const gid = item.dataset.g, wid = item.dataset.w, w = findWord(gid, wid); if (!w) return;
+  const label = tW(w) || w.ua;
+  if (act === "detail") openDetail(gid, wid);
+  if (act === "edit") openForm(gid, w);
+  if (act === "clear-note") { const old = w.note; patchWord(gid, wid, o => ({ ...o, note: "" })); showToast(t("t_note_removed"), () => patchWord(gid, wid, o => ({ ...o, note: old }))); }
+  if (act === "archive") { patchWord(gid, wid, o => ({ ...o, archived: true })); showToast(t("t_archived", label), () => patchWord(gid, wid, o => strip(o, "archived"))); }
+  if (act === "unarchive") { patchWord(gid, wid, o => strip(o, "archived")); showToast(t("t_unarchived", label), () => patchWord(gid, wid, o => ({ ...o, archived: true }))); }
+  if (act === "delete") { patchWord(gid, wid, o => ({ ...o, deleted: true, deletedAt: Date.now() })); showToast(t("t_deleted", label), () => patchWord(gid, wid, o => strip(o, "deleted", "deletedAt"))); }
+  if (act === "restore") { patchWord(gid, wid, o => strip(o, "deleted", "deletedAt")); showToast(t("t_restored", label)); }
+  if (act === "purge") mutateWords(gid, ws => ws.filter(x => x.id !== wid));
+});
+
+/* ================= list clicks ================= */
+$("words").addEventListener("click", e => {
+  const btn = e.target.closest("[data-act]"), item = e.target.closest(".w"), act = btn?.dataset.act;
+  if (act === "menu") { e.stopPropagation(); if (menuFor && menuFor.btn === btn) closeMenu(); else openMenu(btn, item); return; }
+  if (act === "toggle") {
+    const sec = btn.closest(".group"), id = sec.id.slice(2), c = new Set(pref().collapsed || []);
+    c.has(id) ? c.delete(id) : c.add(id); pref().collapsed = [...c]; save();
+    sec.classList.toggle("closed"); btn.setAttribute("aria-expanded", String(!sec.classList.contains("closed"))); return;
+  }
+  if (act === "practice-group") { openPractice({ group: btn.closest(".group").id.slice(2) }); return; }
+  if (act === "pick-group") {
+    const keys = [...btn.closest(".group").querySelectorAll(".w[data-w]")].map(el => key(el.dataset.g, el.dataset.w));
+    const all = keys.every(k => state.selected.has(k)); keys.forEach(k => all ? state.selected.delete(k) : state.selected.add(k)); render(); return;
+  }
+  if (!item || !item.dataset.w) return;
+  if (state.selecting) {
+    const k = key(item.dataset.g, item.dataset.w);
+    state.selected.has(k) ? state.selected.delete(k) : state.selected.add(k);
+    item.classList.toggle("picked", state.selected.has(k)); const cb = item.querySelector(".sel"); if (cb) cb.checked = state.selected.has(k);
+    updateSelBar(); return;
+  }
+  if (state.hide) { item.classList.toggle("shown"); return; }
+  if (state.view !== "trash") openDetail(item.dataset.g, item.dataset.w);
+});
+$("sheets").addEventListener("click", e => {
+  const b = e.target.closest('[data-act="del-sheet"]'); if (!b) return;
+  const sid = b.closest(".sheet").dataset.s;
+  setSheet(sid, { deleted: true }); showToast(t("t_sheet_trash"), () => setSheet(sid, { deleted: false }));
+});
+
+/* ================= toolbar ================= */
+function setView(v) {
+  state.view = v; if (state.selecting) toggleSelect(false);
+  ["active", "archive", "trash"].forEach(x => $("tab-" + x).setAttribute("aria-selected", String(x === v)));
+  $("selmode").hidden = v === "trash"; render(); scrollTo({ top: 0 });
+}
+["active", "archive", "trash"].forEach(v => $("tab-" + v).addEventListener("click", () => setView(v)));
+$("q").addEventListener("input", render);
+$("hidemode").addEventListener("click", () => {
+  state.hide = (state.hide + 1) % 3;
+  document.body.classList.toggle("hide-m", state.hide === 1); document.body.classList.toggle("hide-t", state.hide === 2);
+  $("hidemode").textContent = t("hide" + state.hide); $("hidemode").setAttribute("aria-pressed", String(state.hide !== 0));
+  document.querySelectorAll(".w.shown").forEach(el => el.classList.remove("shown"));
+});
+function applyUa() { document.body.classList.toggle("no-ua", !store.prefs.ua); $("uamode").setAttribute("aria-pressed", String(!!store.prefs.ua)); }
+$("uamode").addEventListener("click", () => { store.prefs.ua = !store.prefs.ua; save(); applyUa(); });
+
+/* ================= selection & bulk ================= */
+function toggleSelect(on) {
+  state.selecting = on; if (!on) state.selected.clear();
+  document.body.classList.toggle("selecting", on);
+  $("selmode").setAttribute("aria-pressed", String(on)); $("selmode").textContent = on ? t("done") : t("select");
+  render();
+}
+$("selmode").addEventListener("click", () => toggleSelect(!state.selecting));
+function selectedWords() {
+  if (!state.dict) return [];
+  const out = [];
+  for (const k of state.selected) { const [gid, wid] = k.split("|"); const g = findGroup(gid), w = findWord(gid, wid); if (g && w && !w.deleted) out.push({ g, w }); }
+  return out;
+}
+function updateSelBar() {
+  const n = state.selected.size;
+  $("selbar").hidden = !state.selecting || !state.dict; $("selcount").textContent = t("selected_n", n);
+  ["b-practice", "b-archive", "b-move", "b-delete"].forEach(id => $(id).disabled = !n);
+  $("b-archive").textContent = state.view === "archive" ? t("to_active") : t("m_archive");
+}
+$("b-done").addEventListener("click", () => toggleSelect(false));
+$("b-practice").addEventListener("click", () => openPractice({ selected: true }));
+$("b-archive").addEventListener("click", () => {
+  const keys = [...state.selected], n = keys.length, toA = state.view !== "archive";
+  const apply = a => bulk(keys, (ws, ids) => ws.map(w => ids.has(w.id) ? (a ? { ...w, archived: true } : strip({ ...w }, "archived")) : w));
+  state.selected.clear(); apply(toA);
+  showToast(t(toA ? "t_bulk_arch" : "t_bulk_unarch", n), () => apply(!toA));
+});
+$("b-delete").addEventListener("click", () => {
+  const keys = [...state.selected], n = keys.length, ts = Date.now();
+  state.selected.clear();
+  bulk(keys, (ws, ids) => ws.map(w => ids.has(w.id) ? { ...w, deleted: true, deletedAt: ts } : w));
+  showToast(t("t_bulk_del", n), () => bulk(keys, (ws, ids) => ws.map(w => ids.has(w.id) ? strip({ ...w }, "deleted", "deletedAt") : w)));
+});
+$("b-move").addEventListener("click", () => {
+  fillGroupSelect($("m-group"), null);
+  $("m-new-field").hidden = $("m-group").value !== "__new"; $("m-new").value = ""; $("m-err").hidden = true;
+  $("m-title").textContent = t("move_title", state.selected.size); $("mdlg").showModal();
+});
+$("m-group").addEventListener("change", () => { $("m-new-field").hidden = $("m-group").value !== "__new"; });
+$("mform").addEventListener("submit", e => {
+  e.preventDefault();
+  const target = $("m-group").value, name = $("m-new").value.trim();
+  if (target === "__new" && !name) { $("m-err").textContent = t("err_topic"); $("m-err").hidden = false; return; }
+  const tg = target === "__new" ? newGroup(name) : findGroup(target);
+  const moving = selectedWords().filter(({ g }) => g.id !== tg.id);
+  for (const { g, w } of moving) { g.words = g.words.filter(x => x.id !== w.id); tg.words.push(w); }
+  state.selected.clear(); $("mdlg").close(); commit(); showToast(t("t_moved", moving.length));
+});
+
+/* ================= add / edit ================= */
+function fillGroupSelect(sel, selected) {
+  sel.innerHTML = groupsSorted().map(g => `<option value="${esc(g.id)}"${g.id === selected ? " selected" : ""}>${esc(g.name)}</option>`).join("") + `<option value="__new">${esc(t("new_topic"))}</option>`;
+  if (!data().groups.length) sel.value = "__new";
+}
+function openForm(gid, w) {
+  state.editing = w ? { gid, id: w.id } : null;
+  $("dlg-title").textContent = t(w ? "edit_word" : "new_word");
+  const set = (id, v) => { $(id).value = v ?? ""; };
+  set("f-cz", w?.cz); set("f-cztr", w?.czTr); set("f-g", w?.g || "m"); set("f-czsyn", (w?.czSyn || []).join(", "));
+  set("f-en", w?.en); set("f-entr", w?.enTr); set("f-ensyn", (w?.enSyn || []).join(", "));
+  set("f-ua", w?.ua); set("f-note", w?.note); set("f-def", w?.def); set("f-ex", (w?.ex || []).map(e => e.ua ? `${e.t} — ${e.ua}` : e.t).join("\n"));
+  $("f-def-l").textContent = t("def_h", t(D().inT));
+  $("f-g").dataset.touched = w ? "1" : "";
+  $("f-pl").checked = !!w?.pl; $("f-q").checked = !!w?.q; $("f-newgroup").value = ""; $("f-err").hidden = true; $("af-msg").hidden = true;
+  fillGroupSelect($("f-group"), gid || groupsSorted()[0]?.id);
+  $("newgroup-field").hidden = $("f-group").value !== "__new";
+  $("dlg").showModal();
+}
+$("f-g").addEventListener("change", () => { $("f-g").dataset.touched = "1"; });
+$("f-group").addEventListener("change", () => { $("newgroup-field").hidden = $("f-group").value !== "__new"; });
+$("add").addEventListener("click", () => openForm(null, null));
+$("wform").addEventListener("submit", e => {
+  e.preventDefault();
+  const err = m => { $("f-err").textContent = m; $("f-err").hidden = false; };
+  const v = id => $(id).value.trim();
+  const target = v(D().T === "cz" ? "f-cz" : "f-en");
+  if (!target) return err(t(D().T === "cz" ? "err_cz" : "err_en"));
+  if (!v(D().M === "cz" ? "f-cz" : "f-en") && !v("f-ua")) return err(t("err_tr"));
+  const gsel = $("f-group").value, newName = v("f-newgroup");
+  if (gsel === "__new" && !newName) return err(t("err_topic"));
+  const from = state.editing?.gid, prev = from ? findWord(from, state.editing.id) : null;
+  const ex = $("f-ex").value.split("\n").map(l => l.trim()).filter(Boolean).map(l => { const i = l.search(/\s[—–-]\s/); return i > 0 ? { t: l.slice(0, i).trim(), ua: l.slice(i + 3).trim() } : { t: l, ua: "" }; });
+  const word = normWord({ ...(prev || {}), id: prev?.id, cz: v("f-cz"), czTr: v("f-cztr"), czSyn: v("f-czsyn"), g: $("f-g").value,
+    en: v("f-en"), enTr: v("f-entr"), enSyn: v("f-ensyn"), ua: v("f-ua"), note: v("f-note"), def: v("f-def"), ex, pl: $("f-pl").checked, q: $("f-q").checked });
+  const tg = gsel === "__new" ? newGroup(newName) : findGroup(gsel);
+  if (from && from !== tg.id) { const fg = findGroup(from); if (fg) fg.words = fg.words.filter(x => x.id !== word.id); }
+  const i = tg.words.findIndex(x => x.id === word.id);
+  if (i >= 0) tg.words[i] = word; else tg.words.push(word);
+  $("dlg").close(); commit();
+  showToast(prev ? t("t_saved") : t("t_added", target)); state.editing = null;
+});
+
+/* ================= online autofill (free services, no keys) ================= */
+async function getJSON(url) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 9000);
+  try { const r = await fetch(url, { signal: ctl.signal }); if (r.status === 404) return null; if (!r.ok) throw new Error("http " + r.status); return await r.json(); }
+  finally { clearTimeout(timer); }
+}
+async function translate(text, from, to) {          // MyMemory: free machine translation, uk / cs / en
+  const j = await getJSON(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`);
+  const s = String(j?.responseData?.translatedText || "").trim();
+  if (!s || Number(j?.responseStatus) !== 200 || /MYMEMORY WARNING|INVALID|QUERY LENGTH/i.test(s)) return "";
+  let out = s.replace(/[.。!]+$/, "");
+  if (text[0] && text[0] === text[0].toLowerCase()) out = out.charAt(0).toLowerCase() + out.slice(1);
+  return fold(out) === fold(text) ? "" : out;
+}
+async function englishInfo(word) {                   // Free Dictionary API: IPA, definition, synonyms, example
+  const w = word.replace(/^to\s+/i, "").trim();
+  if (!w || /\s/.test(w)) return null;
+  const j = await getJSON(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(w.toLowerCase())}`);
+  if (!Array.isArray(j) || !j[0]) return null;
+  const e = j[0], meanings = e.meanings || [];
+  const ipa = e.phonetic || (e.phonetics || []).map(p => p.text).find(Boolean) || "";
+  const defs = meanings.flatMap(m => m.definitions || []);
+  const syn = [...new Set(meanings.flatMap(m => [...(m.synonyms || []), ...(m.definitions || []).flatMap(d => d.synonyms || [])]))].filter(s => s.toLowerCase() !== w.toLowerCase()).slice(0, 2);
+  return { ipa, def: defs[0]?.definition || "", example: defs.map(d => d.example).find(Boolean) || "", syn, pos: meanings[0]?.partOfSpeech || "" };
+}
+function guessGender(cz, pos) {
+  const s = cz.toLowerCase().trim();
+  if (pos === "verb" || /(at|it|et|ět|out|ovat|nout|ít|ýt)( se| si)?$/.test(s)) return "v";
+  if (pos === "adjective" || /ý$/.test(s)) return "a";
+  if (pos === "adverb") return "d";
+  if (/\s/.test(s)) return "x";
+  if (/(a|e|ě|ost)$/.test(s)) return "f";
+  if (/(o|í|um)$/.test(s)) return "n";
+  return "m";
+}
+$("af-go").addEventListener("click", async () => {
+  const msg = $("af-msg"), btn = $("af-go");
+  const get = id => $(id).value.trim(), put = (id, val, label) => { if (val && !get(id)) { $(id).value = val; filled.push(t(label)); } };
+  const filled = [];
+  let cz = get("f-cz"), en = get("f-en"), ua = get("f-ua");
+  msg.classList.remove("err");
+  if (!cz && !en && !ua) { msg.hidden = false; msg.classList.add("err"); msg.textContent = t("af_need"); return; }
+  btn.disabled = true; msg.hidden = false; msg.textContent = t("af_busy");
+  try {
+    if (D().T === "cz") {
+      if (!cz) { cz = await translate(en || ua, en ? "en" : "uk", "cs"); put("f-cz", cz, "fl_cz"); }
+      if (cz && !en) { en = await translate(cz, "cs", "en"); put("f-en", en, "fl_en"); }
+    } else {
+      if (!en) { en = await translate(cz || ua, cz ? "cs" : "uk", "en"); put("f-en", en, "fl_en"); }
+      if (en && !cz) { cz = await translate(en, "en", "cs"); put("f-cz", cz, "fl_cz"); }
+    }
+    if (!ua && (cz || en)) { ua = D().T === "cz" ? await translate(cz, "cs", "uk") : await translate(en, "en", "uk"); put("f-ua", uaShort(ua), "fl_ua"); }
+    let info = null;
+    if (en) {
+      info = await englishInfo(en);
+      if (info) {
+        put("f-entr", info.ipa, "fl_ipa");
+        if (info.syn.length && !get("f-ensyn")) { $("f-ensyn").value = info.syn.join(", "); filled.push(t("fl_syn")); }
+        if (D().T === "en") {
+          if (info.def && !get("f-def")) { $("f-def").value = info.def; filled.push(t("fl_def")); $("f-details").open = true; }
+          if (info.example && !get("f-ex")) { const exUa = await translate(info.example, "en", "uk").catch(() => ""); $("f-ex").value = exUa ? `${info.example} — ${exUa}` : info.example; filled.push(t("fl_ex")); $("f-details").open = true; }
+        }
+      }
+    }
+    if (cz && $("f-g").dataset.touched !== "1") { $("f-g").value = guessGender(cz, info?.pos); filled.push(t("af_gender")); }
+    msg.textContent = filled.length ? t("af_done", filled.join(", ")) : t("af_none");
+  } catch (_) { msg.classList.add("err"); msg.textContent = t("af_off"); }
+  finally { btn.disabled = false; }
+});
+
+/* ================= practice setup ================= */
+function openPractice(opts = {}) {
+  const v = state.view === "trash" ? "active" : state.view;
+  const all = wordsIn(v);
+  $("ps-all-l").textContent = t(v === "archive" ? "p_all_archive" : "p_all_active", all.length);
+  $("ps-glist").innerHTML = groupsSorted().map(g => { const n = g.words.filter(w => inView(w, v)).length;
+    return n ? `<label class="opt"><input type="checkbox" value="${esc(g.id)}"${opts.group === g.id ? " checked" : ""}> ${esc(g.name)} <small>${n}</small></label>` : ""; }).join("");
+  const ns = selectedWords().length;
+  $("ps-sel-l").textContent = ns ? t("p_sel", ns) : t("p_sel_none");
+  $("ps-sel").disabled = !ns;
+  $(opts.group ? "ps-groups" : (opts.selected && ns) ? "ps-sel" : "ps-all").checked = true;
+  const mode = pref().mode || "mt";
+  $("pmodes").innerHTML = ["mt", "tm", "mix", "ut", "def"].map(k => `<label class="opt" for="pm-${k}"><input type="radio" name="pm" id="pm-${k}" value="${k}"${k === mode ? " checked" : ""}> ${esc(modeLabel(k))}</label>`).join("");
+  $("p-err").hidden = true; $("pdlg").dataset.view = v; $("pdlg").showModal();
+}
+$("practice").addEventListener("click", () => openPractice());
+$("ps-glist").addEventListener("change", () => { $("ps-groups").checked = true; });
+$("pform").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("pdlg").dataset.view, scope = document.querySelector('input[name="ps"]:checked').value, mode = document.querySelector('input[name="pm"]:checked').value;
+  pref().mode = mode; save();
+  let items, title;
+  if (scope === "all") { items = wordsIn(v); title = v === "archive" ? t("tab_archive") : t("p_title_all"); }
+  else if (scope === "groups") {
+    const ids = [...$("ps-glist").querySelectorAll("input:checked")].map(i => i.value);
+    if (!ids.length) { $("p-err").textContent = t("p_err_topic"); $("p-err").hidden = false; return; }
+    items = wordsIn(v, ids); title = ids.length === 1 ? findGroup(ids[0]).name : t("p_title_n", ids.length);
+  } else { items = selectedWords(); title = t("p_title_sel"); }
+  $("pdlg").close(); startPractice(items, title, mode);
+});
+
+/* ================= trainer ================= */
+const T = { deck: [], queue: [], known: 0, missed: new Set(), flipped: false, mode: "mt", title: "", dirs: [] };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function startPractice(items, title, mode) {
+  let deck = items.filter(({ w }) => tW(w));
+  if (mode === "def") deck = deck.filter(({ w }) => w.def);
+  if (mode === "mt" || mode === "tm" || mode === "mix") deck = deck.filter(({ w }) => mW(w) || w.ua);
+  if (mode === "ut") deck = deck.filter(({ w }) => w.ua);
+  if (!deck.length) { showToast(t(mode === "def" ? "no_def" : "no_words")); return; }
+  Object.assign(T, { deck, queue: shuffle(deck.map((_, i) => i)), known: 0, missed: new Set(), mode, title,
+    dirs: deck.map(() => mode === "mix" ? (Math.random() < .5 ? "mt" : "tm") : mode) });
+  $("trainer").hidden = false; document.body.style.overflow = "hidden"; showCard();
+}
+function closeTrainer() { $("trainer").hidden = true; document.body.style.overflow = ""; }
+function cardFace(w, g, dir) {
+  const tBlock = `<div class="big ${tCls(w)}">${esc(tW(w))}</div>${tTr(w) ? `<div class="sub2">${esc(tTr(w))}</div>` : ""}`;
+  const mBlock = mW(w) ? `<div class="sub2"><b class="${mCls(w)}" style="font-size:18px">${esc(mW(w))}</b> ${mTr(w) ? `<span class="tr">${esc(mTr(w))}</span>` : ""}</div>` : "";
+  const uaLine = w.ua ? `<div class="sub2">UA: ${esc(w.ua)}</div>` : "";
+  const extra = (tSyn(w).length ? `<div class="sub2">≈ ${esc(tSyn(w).join(", "))}</div>` : "") + (w.note ? `<div class="sub2">! ${esc(w.note)}</div>` : "");
+  const kind = `<div class="kind">${esc(POS(w.g))}${w.pl ? " · " + esc(t("only_pl")) : ""} · ${esc(g.name)}</div>`;
+  const hint = s => `<div class="hint">${esc(s)}</div>`;
+  if (dir === "mt") return kind + `<div class="big ${mCls(w)}">${esc(mW(w) || w.ua)}</div>` + (T.flipped ? `<div class="ans">${tBlock}${uaLine}${extra}</div>` : hint(t("say_in", t(D().inT))));
+  if (dir === "ut") return kind + `<div class="big">${esc(w.ua)}</div>` + (T.flipped ? `<div class="ans">${tBlock}${mBlock}${extra}</div>` : hint(t("say_in", t(D().inT))));
+  if (dir === "def") return `<div class="kind">${esc(POS(w.g))} · ${esc(t("what_word"))}</div><div class="defq">${esc(w.def)}</div>` + (T.flipped ? `<div class="ans">${tBlock}${mBlock}${uaLine}</div>` : hint(t("name_in", t(D().inT))));
+  return kind + tBlock + (T.flipped ? `<div class="ans">${mBlock || `<div class="big">${esc(w.ua)}</div>`}${uaLine}${extra}</div>` : hint(t("say_in", t(D().inM))));
+}
+const paint = () => { const i = T.queue[0], { w, g } = T.deck[i]; return `<span class="stamp no" id="st-no">${esc(t("stamp_no"))}</span><span class="stamp yes" id="st-yes">${esc(t("stamp_yes"))}</span>${cardFace(w, g, T.dirs[i])}`; };
+function showCard() {
+  const total = T.deck.length;
+  $("t-title").textContent = `${T.title} · ${modeLabel(T.mode)}`; $("t-prog").textContent = `${T.known} / ${total}`;
+  $("t-bar").style.width = (T.known / total * 100) + "%";
+  if (!T.queue.length) return showDone();
+  T.flipped = false; $("t-foot").hidden = false;
+  $("t-stage").innerHTML = `<div class="card" id="card" tabindex="0" role="button" aria-label="${esc(t("card_aria"))}">${paint()}</div>`;
+  bindCard($("card"));
+}
+function flip() { if (!T.queue.length) return; T.flipped = !T.flipped; $("card").innerHTML = paint(); }
+function judge(ok) { if (!T.queue.length) return; const i = T.queue.shift(); if (ok) T.known++; else { T.missed.add(i); T.queue.push(i); } showCard(); }
+function fly(ok) {
+  const c = $("card"); if (!c) return judge(ok);
+  c.style.transform = `translateX(${ok ? 140 : -140}%) rotate(${ok ? 16 : -16}deg)`; c.style.opacity = "0";
+  setTimeout(() => judge(ok), matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200);
+}
+function bindCard(c) {
+  let x0 = null, dx = 0;
+  c.addEventListener("pointerdown", e => { x0 = e.clientX; dx = 0; try { c.setPointerCapture(e.pointerId); } catch (_) {} c.classList.add("drag"); });
+  c.addEventListener("pointermove", e => {
+    if (x0 === null) return; dx = e.clientX - x0;
+    c.style.transform = `translateX(${dx}px) rotate(${dx / 22}deg)`;
+    $("st-yes").style.opacity = Math.max(0, Math.min(1, dx / 90)); $("st-no").style.opacity = Math.max(0, Math.min(1, -dx / 90));
+  });
+  const end = () => {
+    if (x0 === null) return; c.classList.remove("drag"); x0 = null;
+    if (Math.abs(dx) > 90) fly(dx > 0);
+    else { c.style.transform = ""; $("st-yes").style.opacity = 0; $("st-no").style.opacity = 0; if (Math.abs(dx) < 8) flip(); }
+  };
+  c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
+  c.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); flip(); } });
+}
+function showDone() {
+  const total = T.deck.length, first = total - T.missed.size, missed = [...T.missed].map(i => T.deck[i]);
+  $("t-foot").hidden = true; $("t-prog").textContent = `${total} / ${total}`;
+  $("t-stage").innerHTML = `<div class="done"><h2>${esc(t("done_h"))}</h2><p>${t("first_try", first, total)}</p>` +
+    (missed.length ? `<p>${esc(t("work_on"))}</p><ul>${missed.map(({ w }) => `<li><b class="${tCls(w)}">${esc(tW(w))}</b> — ${esc(mW(w) || w.ua)}</li>`).join("")}</ul>` : `<p>${esc(t("all_first"))}</p>`) +
+    `<div class="row3">${missed.length ? `<button class="btn primary" type="button" id="d-missed">${esc(t("repeat_mistakes", missed.length))}</button>` : ""}<button class="btn" type="button" id="d-again">${esc(t("again_all"))}</button><button class="btn" type="button" id="d-x">${esc(t("close"))}</button></div></div>`;
+  const base = T.title;
+  $("d-again").onclick = () => startPractice(T.deck, base, T.mode);
+  $("d-x").onclick = closeTrainer;
+  if (missed.length) $("d-missed").onclick = () => startPractice(missed, `${base} · ${t("p_mistakes")}`, T.mode);
+}
+$("t-close").addEventListener("click", closeTrainer);
+$("t-yes").addEventListener("click", () => fly(true));
+$("t-no").addEventListener("click", () => fly(false));
+document.addEventListener("keydown", e => {
+  if ($("trainer").hidden) return;
+  if (e.key === "Escape") closeTrainer();
+  else if (e.key === " " && T.queue.length) { e.preventDefault(); flip(); }
+  else if (e.key === "ArrowRight" && T.queue.length) fly(true);
+  else if (e.key === "ArrowLeft" && T.queue.length) fly(false);
+});
+
+/* ================= settings: language, theme, data ================= */
+function openSettings() {
+  $("exp-share").hidden = !(navigator.canShare && window.File && (() => { try { return navigator.canShare({ files: [new File(["x"], "x.json", { type: "application/json" })] }); } catch (_) { return false; } })());
+  $("lastbackup").textContent = store.lastBackup ? t("last_backup", new Date(store.lastBackup).toLocaleDateString(LOCALES[LANG])) : t("no_backup");
+  $("imp-err").hidden = true; $("imp-merge").checked = true; $("imp-go").textContent = t("imp_go"); delete $("imp-go").dataset.sure;
+  applyI18n(); applyTheme();
+  $("setdlg").showModal();
+}
+$("settings-btn").addEventListener("click", openSettings);
+$("ch-settings").addEventListener("click", openSettings);
+$("langseg").addEventListener("click", e => { const b = e.target.closest("[data-lang]"); if (b) { setLang(b.dataset.lang); openSettingsRefresh(); } });
+function openSettingsRefresh() {
+  $("lastbackup").textContent = store.lastBackup ? t("last_backup", new Date(store.lastBackup).toLocaleDateString(LOCALES[LANG])) : t("no_backup");
+  $("imp-go").textContent = $("imp-replace").checked ? t("imp_replace") : t("imp_go");
+}
+$("themeseg").addEventListener("click", e => { const b = e.target.closest("[data-theme-v]"); if (b) { store.prefs.theme = b.dataset.themeV; save(); applyTheme(); } });
+const backupText = () => JSON.stringify({ app: "vokab", type: "backup", version: 1, exportedAt: new Date().toISOString(), dicts: store.dicts });
+const backupName = () => `vocab-${new Date().toISOString().slice(0, 10)}.json`;
+function markBackup() { store.lastBackup = Date.now(); save(); $("lastbackup").textContent = t("last_backup", new Date().toLocaleDateString(LOCALES[LANG])); }
+$("exp-file").addEventListener("click", () => {
+  const url = URL.createObjectURL(new Blob([backupText()], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = backupName(); document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500); markBackup();
+});
+$("exp-share").addEventListener("click", async () => {
+  try { await navigator.share({ files: [new File([backupText()], backupName(), { type: "application/json" })], title: t("app") }); markBackup(); }
+  catch (e) { if (e && e.name !== "AbortError") showToast(t("share_fail")); }
+});
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); showToast(okMsg); return true; }
+  catch (_) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch (_) {} ta.remove();
+    showToast(ok ? okMsg : t("copy_fail")); return ok;
+  }
+}
+$("exp-copy").addEventListener("click", async () => { if (await copyText(backupText(), t("copied_backup"))) markBackup(); });
+$("imp-file").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { $("imp-text").value = String(r.result || ""); $("imp-err").hidden = true; }; r.readAsText(f); e.target.value = "";
+});
+$("imp-replace").addEventListener("change", () => { $("imp-go").textContent = t("imp_replace"); });
+$("imp-merge").addEventListener("change", () => { $("imp-go").textContent = t("imp_go"); delete $("imp-go").dataset.sure; });
+function parseImport(text) {
+  let s = String(text || "").trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/); if (fence) s = fence[1].trim();
+  const a = s.indexOf("{"), b = s.lastIndexOf("}"); if (a < 0 || b < a) throw new Error("no json");
+  return JSON.parse(s.slice(a, b + 1));
+}
+function findDup(dict, w, T) {
+  for (const g of dict.groups) for (const x of g.words) { if (x.id === w.id) return x; const a = fold(x[T]), b = fold(w[T]); if (a && a === b) return x; }
+  return null;
+}
+function mergeInto(dk, src, stats) {
+  const dst = store.dicts[dk], T = DICTS[dk].T;
+  for (const sg0 of (src.groups || [])) {
+    const sg = { ...sg0, name: sg0.name || sg0.ua || "—" };
+    let g = dst.groups.find(x => sg.id && x.id === sg.id) || dst.groups.find(x => fold(x.name) === fold(sg.name));
+    if (!g) { g = { id: String(sg.id || newId("t")), name: String(sg.name), sub: String(sg.sub || sg.cz || ""), order: Math.max(0, ...dst.groups.map(x => x.order || 0)) + 10, words: [] }; dst.groups.push(g); stats.groups++; }
+    for (const raw of (sg.words || [])) {
+      const w = normWord(raw);
+      if (!w[T] && !w.ua) continue;
+      const hit = findDup(dst, w, T);
+      if (hit) {
+        for (const k of ["czTr", "en", "enTr", "ua", "note", "def", "cz"]) if (!hit[k] && w[k]) hit[k] = w[k];
+        for (const k of ["czSyn", "enSyn", "ex"]) if ((!hit[k] || !hit[k].length) && w[k].length) hit[k] = w[k];
+        stats.updated++;
+      } else { g.words.push(w); stats.added++; }
+    }
+  }
+  for (const s of (src.sheets || [])) {
+    if (!dst.sheets.some(x => (s.id && x.id === s.id) || fold(x.title) === fold(s.title))) { dst.sheets.push({ ...s, id: String(s.id || newId("s")), order: Math.max(0, ...dst.sheets.map(x => x.order || 0)) + 10 }); stats.sheets++; }
+  }
+}
+$("imp-go").addEventListener("click", () => {
+  const err = m => { $("imp-err").textContent = m; $("imp-err").hidden = false; };
+  let obj; try { obj = parseImport($("imp-text").value); } catch (_) { return err(t("imp_bad")); }
+  const replace = $("imp-replace").checked;
+  if (replace && $("imp-go").dataset.sure !== "1") { $("imp-go").dataset.sure = "1"; $("imp-go").textContent = t("imp_sure"); return; }
+  const stats = { added: 0, updated: 0, groups: 0, sheets: 0 };
+  if (obj.dicts) {
+    if (replace) store.dicts = { cs: normDict(obj.dicts.cs), en: normDict(obj.dicts.en) };
+    else for (const k of ["cs", "en"]) if (obj.dicts[k]) mergeInto(k, obj.dicts[k], stats);
+  } else if (obj.groups || obj.words) {
+    const k = obj.dict === "en" ? "en" : "cs";
+    const src = obj.groups ? obj : { groups: [{ name: obj.group || "—", words: obj.words }] };
+    if (replace) store.dicts[k] = { groups: [], sheets: [] };
+    mergeInto(k, src, stats);
+  } else return err(t("imp_nowords"));
+  save();
+  $("imp-text").value = ""; $("setdlg").close();
+  openDict(obj.dicts ? (state.dict || "cs") : (obj.dict === "en" ? "en" : "cs"));
+  showToast(replace ? t("imp_replaced") : [t("imp_added", stats.added), stats.updated ? t("imp_updated", stats.updated) : "", stats.groups ? t("imp_topics", stats.groups) : ""].filter(Boolean).join(", "));
+});
+function claudePrompt(dk) {
+  const topics = store.dicts[dk].groups.map(g => g.name).join(", ") || "—";
+  const ex = dk === "cs"
+    ? `{"cz":"kalhoty","g":"f","pl":true,"czTr":"[калготі]","czSyn":["džíny"],"en":"trousers","enTr":"/ˈtraʊzəz/","enSyn":["pants"],"ua":"штани","note":"не плутати з kalhotky","def":"Část oblečení, která zakrývá nohy od pasu ke kotníkům.","ex":[{"t":"Ty kalhoty ti sluší.","ua":"Ці штани тобі личать."}]}`
+    : `{"en":"tedious","enTr":"/ˈtiːdiəs/","enSyn":["boring","dull"],"cz":"únavný","g":"a","czTr":"","czSyn":["nudný"],"ua":"нудний","note":"","def":"Too long, slow or dull, so that it makes you tired.","ex":[{"t":"Filling in forms is tedious.","ua":"Заповнювати анкети нудно."}]}`;
+  return `Я вчу ${dk === "cs" ? "чеську" : "англійську"} мову. Зроби пакет нових слів для мого застосунку-словника з того, що я надішлю (фото зошита чи підручника, голосове або список).
+Поверни ТІЛЬКИ JSON у блоці коду, без пояснень, ось у такому форматі:
+{"app":"vokab","dict":"${dk}","groups":[{"name":"<тема українською>","sub":"<тема ${dk === "cs" ? "чеською" : "англійською"}>","words":[
+${ex}
+]}]}
+Правила:
+- Головне слово — ${dk === "cs" ? "чеське (cz)" : "англійське (en)"}, основний переклад — ${dk === "cs" ? "англійський (en)" : "чеський (cz)"}, ua — українською 1–2 слова.
+- g — рід чеського слова: m, f, n; для дієслів v, прикметників a, прислівників d, виразів x. "pl":true — якщо слово буває тільки в множині.
+- czTr — як читати чеське слово українськими літерами, тільки для важких слів («:» — довгий звук), інакше "".
+- enTr — вимова англійського слова в IPA.
+- czSyn і enSyn — до 2 справді вживаних синонімів, або [].
+- note — тільки особливість слова (виняток, «не плутати з …», розмовне), інакше "".
+- def — пояснення ${dk === "cs" ? "чеською" : "англійською"} одним реченням, у якому немає самого слова.
+- ex — 2–3 приклади ${dk === "cs" ? "чеською" : "англійською"} з перекладом українською для складних дієслів і виразів, інакше [].
+- Розклади слова за темами. Мої теми зараз: ${topics}. Якщо слово не пасує до жодної — створи нову тему.
+- Якщо якесь слово в записі нерозбірливе — додай до нього "q":true.`;
+}
+$("prompt-cs").addEventListener("click", () => copyText(claudePrompt("cs"), t("prompt_copied")));
+$("prompt-en").addEventListener("click", () => copyText(claudePrompt("en"), t("prompt_copied")));
+
+/* ================= start ================= */
+LANG = pickLang();
+applyI18n(); applyTheme(); applyUa();
+addEventListener("hashchange", () => { const k = location.hash.slice(1); if (DICTS[k] && k !== state.dict) openDict(k); });
+(function start() {
+  const h = location.hash.slice(1);
+  if (DICTS[h]) openDict(h);
+  else if (DICTS[window.VOKAB_DEFAULT]) openDict(window.VOKAB_DEFAULT);
+  else showChooser();
+})();
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
+</body>
+</html>
