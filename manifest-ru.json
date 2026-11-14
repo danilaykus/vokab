@@ -1,7 +1,7 @@
 {
  "id": "index.html",
- "name": "Словарь",
- "short_name": "Словарь",
+ "name": "Ай!словарь",
+ "short_name": "Ай!словарь",
  "start_url": "index.html",
  "scope": "./",
  "display": "standalone",

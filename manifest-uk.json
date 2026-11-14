@@ -1,7 +1,7 @@
 {
  "id": "index.html",
- "name": "Словник",
- "short_name": "Словник",
+ "name": "Ай!словник",
+ "short_name": "Ай!словник",
  "start_url": "index.html",
  "scope": "./",
  "display": "standalone",

@@ -1,7 +1,7 @@
 {
  "id": "index.html",
- "name": "Vocab",
- "short_name": "Vocab",
+ "name": "Ay!Slovník",
+ "short_name": "Ay!Slovník",
  "start_url": "index.html",
  "scope": "./",
  "display": "standalone",

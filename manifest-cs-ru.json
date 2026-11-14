@@ -1,7 +1,7 @@
 {
  "id": "cs.html",
- "name": "Словарь · čeština",
- "short_name": "Словарь CZ",
+ "name": "Ай!словарь · čeština",
+ "short_name": "Ай!словарь CZ",
  "start_url": "cs.html",
  "scope": "./",
  "display": "standalone",

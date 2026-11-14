@@ -1,7 +1,7 @@
 {
  "id": "en.html",
- "name": "Словник · English",
- "short_name": "Словник EN",
+ "name": "Ай!словник · English",
+ "short_name": "Ай!словник EN",
  "start_url": "en.html",
  "scope": "./",
  "display": "standalone",

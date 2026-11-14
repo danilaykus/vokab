@@ -1,7 +1,7 @@
 {
  "id": "en.html",
- "name": "Vocab · English",
- "short_name": "Vocab EN",
+ "name": "Ay!Slovník · English",
+ "short_name": "Ay!Slovník EN",
  "start_url": "en.html",
  "scope": "./",
  "display": "standalone",

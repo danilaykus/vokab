@@ -1,7 +1,7 @@
 {
  "id": "en.html",
- "name": "Vocabulary · English",
- "short_name": "Vocabulary EN",
+ "name": "Ay!vocab · English",
+ "short_name": "Ay!vocab EN",
  "start_url": "en.html",
  "scope": "./",
  "display": "standalone",
