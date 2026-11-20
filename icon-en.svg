@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#33287a"/>
+<defs><mask id="pg"><polyline points="126,132 256,368 386,132" fill="none" stroke="#fff" stroke-width="54" stroke-linejoin="miter" stroke-linecap="butt"/></mask></defs>
+<polyline points="126,158 256,394 386,158" fill="none" stroke="#f2c14e" stroke-width="66" stroke-linejoin="miter" stroke-linecap="butt"/>
+<polyline points="126,132 256,368 386,132" fill="none" stroke="#ffffff" stroke-width="62" stroke-linejoin="miter" stroke-linecap="butt"/>
+<g mask="url(#pg)"><polyline points="126,114 256,350 386,114" fill="none" stroke="#d3cdee" stroke-width="3.5" stroke-linejoin="miter"/><polyline points="126,130 256,366 386,130" fill="none" stroke="#d3cdee" stroke-width="3.5" stroke-linejoin="miter"/><polyline points="126,146 256,382 386,146" fill="none" stroke="#d3cdee" stroke-width="3.5" stroke-linejoin="miter"/></g>
+<path d="M243 380 h26 v78 l-13 -13 l-13 13 z" fill="#f2c14e"/>
+</svg>
